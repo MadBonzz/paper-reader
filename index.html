@@ -1,0 +1,1116 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Paper Reader</title>
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+html, body { height: 100%; overflow: hidden; font-family: 'Segoe UI', system-ui, -apple-system, sans-serif; font-size: 13px; color: #1e293b; background: #e2e8f0; }
+
+/* ── TOOLBAR ── */
+#toolbar {
+  height: 46px; background: #0f172a; display: flex; align-items: center;
+  padding: 0 12px; gap: 6px; flex-shrink: 0; border-bottom: 1px solid #1e293b;
+}
+.app-logo { font-size: 14px; font-weight: 700; color: #f8fafc; margin-right: 6px; letter-spacing: -0.3px; white-space: nowrap; }
+.t-sep { width: 1px; height: 22px; background: #334155; margin: 0 2px; flex-shrink: 0; }
+button {
+  padding: 5px 10px; border: 1px solid #334155; border-radius: 5px;
+  background: #1e293b; color: #cbd5e1; cursor: pointer; font-size: 12px;
+  font-family: inherit; transition: background 0.12s, color 0.12s; white-space: nowrap;
+}
+button:hover { background: #334155; color: #f8fafc; }
+.btn-primary { background: #2563eb; border-color: #1d4ed8; color: white; }
+.btn-primary:hover { background: #1d4ed8; }
+.btn-green { background: #166534; border-color: #14532d; color: #bbf7d0; }
+.btn-green:hover { background: #14532d; }
+#save-indicator { font-size: 11px; color: #64748b; margin-left: auto; white-space: nowrap; }
+
+/* ── LAYOUT ── */
+#main { display: flex; height: calc(100vh - 46px); overflow: hidden; }
+
+/* ── PDF PANEL ── */
+#pdf-panel { width: 58%; min-width: 280px; display: flex; flex-direction: column; background: #475569; flex-shrink: 0; }
+
+/* URL BAR */
+#url-bar {
+  display: flex; align-items: center; gap: 0; background: #1e293b;
+  border-bottom: 1px solid #0f172a; padding: 0; flex-shrink: 0;
+}
+#url-input {
+  flex: 1; padding: 8px 12px; background: #0f172a; border: none; outline: none;
+  color: #e2e8f0; font-size: 12px; font-family: inherit;
+}
+#url-input::placeholder { color: #475569; }
+#url-input:focus { background: #162032; }
+#url-load-btn {
+  padding: 8px 14px; background: #2563eb; border: none; border-left: 1px solid #1d4ed8;
+  color: white; cursor: pointer; font-size: 12px; font-family: inherit;
+  border-radius: 0; white-space: nowrap; flex-shrink: 0;
+}
+#url-load-btn:hover { background: #1d4ed8; }
+#url-status {
+  padding: 3px 12px; font-size: 10px; min-height: 20px; background: #1e293b;
+  display: flex; align-items: center; gap: 8px; flex-shrink: 0;
+}
+.status-badge {
+  padding: 1px 7px; border-radius: 10px; font-size: 10px; font-weight: 600;
+  text-transform: uppercase; letter-spacing: 0.04em;
+}
+.badge-arxiv    { background: #dc2626; color: white; }
+.badge-openreview { background: #7c3aed; color: white; }
+.badge-pdf      { background: #334155; color: #94a3b8; }
+.status-txt { color: #64748b; font-size: 10px; }
+.status-ok  { color: #4ade80; }
+.status-err { color: #f87171; }
+.status-loading { color: #60a5fa; }
+
+/* PAGE CONTROLS */
+#pdf-controls {
+  display: flex; align-items: center; gap: 6px; padding: 6px 10px;
+  background: #334155; border-bottom: 1px solid #1e293b; flex-shrink: 0;
+}
+#pdf-controls button { padding: 3px 8px; font-size: 11px; }
+#page-input {
+  width: 42px; text-align: center; padding: 3px 4px; border: 1px solid #475569;
+  border-radius: 4px; background: #1e293b; color: #f8fafc; font-size: 12px; font-family: inherit;
+}
+.zoom-lbl { font-size: 11px; color: #94a3b8; }
+#url-mode-controls {
+  display: none; align-items: center; gap: 8px; padding: 6px 10px;
+  background: #334155; border-bottom: 1px solid #1e293b; flex-shrink: 0;
+}
+#url-mode-controls button { padding: 3px 8px; font-size: 11px; }
+.url-mode-hint { font-size: 11px; color: #94a3b8; }
+
+/* PDF CONTAINER */
+#pdf-container { flex: 1; overflow-y: auto; overflow-x: auto; display: flex; flex-direction: column; align-items: center; padding: 16px; gap: 0; position: relative; }
+#pdf-canvas { box-shadow: 0 4px 20px rgba(0,0,0,0.5); background: white; display: none; }
+#pdf-frame { display: none; width: 100%; height: 100%; border: none; position: absolute; inset: 0; }
+#pdf-placeholder { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 14px; flex: 1; color: #94a3b8; text-align: center; }
+#pdf-placeholder .pl-icon { font-size: 40px; }
+#pdf-placeholder p { font-size: 14px; line-height: 1.6; }
+.pl-or { font-size: 11px; color: #64748b; }
+#pdf-container::-webkit-scrollbar { width: 8px; }
+#pdf-container::-webkit-scrollbar-track { background: #334155; }
+#pdf-container::-webkit-scrollbar-thumb { background: #475569; border-radius: 4px; }
+
+/* RESIZER */
+#resizer { width: 4px; cursor: col-resize; background: #334155; transition: background 0.15s; flex-shrink: 0; }
+#resizer:hover, #resizer.active { background: #3b82f6; }
+
+/* ── NOTES PANEL ── */
+#notes-panel { flex: 1; overflow-y: auto; overflow-x: hidden; background: #f8fafc; min-width: 300px; }
+#notes-panel::-webkit-scrollbar { width: 6px; }
+#notes-panel::-webkit-scrollbar-track { background: #f1f5f9; }
+#notes-panel::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 3px; }
+
+/* PAPER INFO */
+#paper-info { padding: 12px 14px 10px; background: white; border-bottom: 2px solid #e2e8f0; }
+#paper-title {
+  width: 100%; font-size: 15px; font-weight: 700; color: #0f172a; border: none; outline: none;
+  margin-bottom: 7px; padding: 2px 0; border-bottom: 2px solid transparent; font-family: inherit;
+}
+#paper-title:focus { border-bottom-color: #3b82f6; }
+#paper-title::placeholder { font-weight: 400; color: #94a3b8; }
+.meta-row { display: flex; gap: 6px; margin-bottom: 5px; }
+.meta-in {
+  flex: 1; font-size: 12px; padding: 4px 7px; border: 1px solid #e2e8f0; border-radius: 4px;
+  background: #f8fafc; color: #334155; outline: none; font-family: inherit;
+}
+.meta-in:focus { border-color: #3b82f6; background: white; }
+.meta-in.autofilled { border-color: #86efac; background: #f0fdf4; }
+
+/* LEGEND */
+#legend-wrap { background: #fefce8; border-bottom: 1px solid #fde68a; padding: 7px 14px; font-size: 11px; }
+#legend-wrap strong { font-size: 10px; text-transform: uppercase; letter-spacing: 0.05em; color: #92400e; display: block; margin-bottom: 4px; }
+#legend-items { display: flex; flex-wrap: wrap; gap: 3px 10px; }
+.l-item { display: inline-flex; align-items: center; gap: 3px; }
+.l-tag { font-size: 10px; font-weight: 700; padding: 1px 5px; border-radius: 3px; color: white; }
+.l-label { font-size: 11px; color: #44403c; }
+
+/* PHASE HEADER */
+.phase-hdr {
+  padding: 5px 14px; font-size: 9px; font-weight: 700; letter-spacing: 0.14em;
+  text-transform: uppercase; color: #94a3b8; background: #f1f5f9;
+  border-top: 1px solid #e2e8f0; border-bottom: 1px solid #e2e8f0; margin-top: 3px;
+}
+
+/* SECTION */
+.sec { background: white; border-bottom: 1px solid #e2e8f0; }
+.sec-hdr {
+  display: flex; align-items: center; gap: 7px; padding: 8px 12px 8px 10px;
+  cursor: pointer; user-select: none; border-left: 3px solid transparent;
+}
+.sec-hdr:hover { background: #f8fafc; }
+.sec-title { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em; color: #334155; flex: 1; }
+.sec-hint { font-size: 10px; color: #94a3b8; font-style: italic; }
+.sec-collapse { font-size: 10px; color: #94a3b8; background: none; border: none; cursor: pointer; padding: 0; line-height: 1; }
+.sec-collapse:hover { color: #475569; background: none; }
+.add-btn { font-size: 11px; padding: 2px 7px; background: #eff6ff; border: 1px solid #bfdbfe; color: #1d4ed8; border-radius: 3px; }
+.add-btn:hover { background: #dbeafe; }
+.sec-body { padding: 8px 12px 12px; }
+.sec-body.collapsed { display: none; }
+
+/* PROMPTS & TEXTAREAS */
+.prompt { font-size: 11px; color: #64748b; margin-bottom: 6px; font-style: italic; line-height: 1.5; }
+textarea {
+  width: 100%; min-height: 80px; padding: 8px 10px; border: 1px solid #e2e8f0;
+  border-radius: 6px; font-size: 13px; font-family: inherit; color: #1e293b;
+  background: #f8fafc; resize: vertical; outline: none; line-height: 1.55;
+}
+textarea:focus { border-color: #3b82f6; background: white; }
+
+/* BEFORE-READING */
+.before-sec .sec-hdr { background: #fffbeb; border-left-color: #f59e0b; }
+.before-sec .sec-hdr:hover { background: #fef3c7; }
+.before-sec .sec-body { background: #fffbeb; }
+.before-sec textarea { background: #fefce8; border-color: #fde68a; }
+.before-sec textarea:focus { background: white; border-color: #f59e0b; }
+
+/* DYNAMIC ITEMS */
+.item-wrap { margin-bottom: 8px; border: 1px solid #e2e8f0; border-radius: 6px; overflow: hidden; }
+.item-hdr { display: flex; align-items: center; gap: 6px; padding: 5px 8px; background: #f8fafc; border-bottom: 1px solid #e2e8f0; }
+.i-tag { font-size: 10px; font-weight: 700; padding: 2px 6px; border-radius: 3px; color: white; flex-shrink: 0; letter-spacing: 0.02em; }
+.i-label { flex: 1; font-size: 11px; padding: 3px 6px; border: 1px solid #e2e8f0; border-radius: 3px; background: white; color: #64748b; outline: none; font-family: inherit; }
+.i-label:focus { border-color: #3b82f6; color: #1e293b; }
+.i-label::placeholder { color: #cbd5e1; }
+.del-btn { font-size: 15px; line-height: 1; padding: 0 4px; background: none; border: none; color: #94a3b8; cursor: pointer; }
+.del-btn:hover { color: #ef4444; background: none; }
+.i-text { min-height: 60px; border: none; border-radius: 0; background: white; }
+.i-text:focus { border: none; background: #fffffe; outline: 1px solid #3b82f680; }
+.empty-msg { font-size: 11px; color: #94a3b8; font-style: italic; padding: 2px 0 4px; }
+
+/* SECTION BORDER COLORS */
+.sec-problem .sec-hdr { border-left-color: #334155; }
+.sec-prior   .sec-hdr { border-left-color: #f59e0b; }
+.sec-d  .sec-hdr { border-left-color: #3b82f6; }
+.sec-t  .sec-hdr { border-left-color: #10b981; }
+.sec-i  .sec-hdr { border-left-color: #8b5cf6; }
+.sec-b  .sec-hdr { border-left-color: #f59e0b; }
+.sec-rq .sec-hdr { border-left-color: #ef4444; }
+.sec-e  .sec-hdr { border-left-color: #06b6d4; }
+.sec-mq .sec-hdr { border-left-color: #ec4899; }
+.sec-core .sec-hdr { border-left-color: #0f172a; }
+
+/* TAG COLORS */
+.tag-d  { background: #3b82f6; }
+.tag-t  { background: #10b981; }
+.tag-i  { background: #8b5cf6; }
+.tag-b  { background: #f59e0b; }
+.tag-rq { background: #ef4444; }
+.tag-e  { background: #06b6d4; }
+.tag-mq { background: #ec4899; }
+
+/* CORE INSIGHT */
+.core-ta { font-size: 14px; font-weight: 500; min-height: 65px; }
+.char-hint { font-size: 10px; color: #94a3b8; text-align: right; margin-top: 3px; }
+
+/* MODAL */
+.overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.55); display: flex; align-items: center; justify-content: center; z-index: 999; }
+.overlay.hidden { display: none; }
+.modal { background: white; border-radius: 10px; padding: 22px; max-width: 500px; width: 92%; box-shadow: 0 20px 60px rgba(0,0,0,0.3); }
+.modal h2 { font-size: 16px; font-weight: 700; color: #0f172a; margin-bottom: 12px; }
+.modal p { font-size: 13px; color: #334155; line-height: 1.6; margin-bottom: 8px; }
+.modal ol { padding-left: 20px; margin: 8px 0 12px; }
+.modal ol li { margin-bottom: 6px; font-size: 13px; color: #334155; }
+.modal code { background: #f1f5f9; padding: 1px 5px; border-radius: 3px; font-family: monospace; font-size: 12px; }
+.modal a { color: #2563eb; }
+.m-input { width: 100%; padding: 8px 11px; border: 1px solid #e2e8f0; border-radius: 6px; font-size: 13px; font-family: inherit; outline: none; margin-bottom: 12px; }
+.m-input:focus { border-color: #3b82f6; }
+.m-actions { display: flex; gap: 8px; justify-content: flex-end; margin-top: 4px; }
+.btn-danger { border-color: #fecaca; color: #dc2626; background: #fff5f5; }
+.btn-danger:hover { background: #fee2e2; }
+#notes-bottom-pad { height: 40px; background: white; }
+</style>
+</head>
+<body>
+
+<!-- TOOLBAR -->
+<div id="toolbar">
+  <span class="app-logo">Paper Reader</span>
+  <div class="t-sep"></div>
+  <input type="file" id="pdf-input" accept=".pdf" style="display:none">
+  <button onclick="document.getElementById('pdf-input').click()">Open Local PDF</button>
+  <button onclick="newPaper()">New</button>
+  <div class="t-sep"></div>
+  <input type="file" id="json-input" accept=".json" style="display:none">
+  <button onclick="document.getElementById('json-input').click()">Load Notes</button>
+  <button onclick="exportJSON()">Save Notes</button>
+  <button onclick="exportHTML()">Export HTML</button>
+  <div class="t-sep"></div>
+  <button class="btn-green" onclick="handleGDocs()">Google Docs</button>
+  <button onclick="openSettings()">Settings</button>
+  <span id="save-indicator">Not saved</span>
+</div>
+
+<!-- MAIN -->
+<div id="main">
+
+  <!-- PDF PANEL -->
+  <div id="pdf-panel">
+
+    <!-- URL INPUT BAR -->
+    <div id="url-bar">
+      <input type="text" id="url-input"
+        placeholder="Paste arxiv.org/abs/..., openreview.net/forum?id=..., or any PDF URL — press Enter"
+        onkeydown="if(event.key==='Enter') loadFromUrl()">
+      <button id="url-load-btn" onclick="loadFromUrl()">Load</button>
+    </div>
+    <div id="url-status">
+      <span class="status-txt" id="url-status-txt">Supports arxiv, openreview, or direct PDF links</span>
+    </div>
+
+    <!-- FILE MODE: page nav + zoom controls -->
+    <div id="pdf-controls">
+      <button onclick="prevPage()" title="Prev (&#8592;)">&#9664;</button>
+      <input type="number" id="page-input" value="1" min="1" onchange="goToPage(this.value)">
+      <span id="page-total" class="zoom-lbl">/ —</span>
+      <button onclick="nextPage()" title="Next (&#8594;)">&#9654;</button>
+      <div style="margin-left:8px;display:flex;gap:4px">
+        <button onclick="zoom(-0.25)" title="Zoom out">&#8722;</button>
+        <button onclick="zoom(+0.25)" title="Zoom in">+</button>
+        <button onclick="fitW()" title="Fit width">&#8596;</button>
+      </div>
+      <span id="zoom-lbl" class="zoom-lbl" style="margin-left:4px">100%</span>
+    </div>
+
+    <!-- URL MODE: open-in-tab button -->
+    <div id="url-mode-controls">
+      <span class="url-mode-hint">Using browser PDF viewer &mdash; scroll and zoom inside the panel</span>
+      <button onclick="openCurrentInTab()" title="Open in new tab">&#8599; Open in new tab</button>
+    </div>
+
+    <!-- PDF CONTENT -->
+    <div id="pdf-container">
+      <div id="pdf-placeholder">
+        <div class="pl-icon">&#128196;</div>
+        <p>Paste an arxiv, openreview, or PDF URL above<br>
+        <span class="pl-or">— or —</span><br>
+        Open a local PDF file</p>
+        <div style="display:flex;gap:8px;margin-top:4px">
+          <button class="btn-primary" onclick="focusUrlInput()">Paste URL</button>
+          <button onclick="document.getElementById('pdf-input').click()">Open Local File</button>
+        </div>
+      </div>
+      <!-- local file mode -->
+      <canvas id="pdf-canvas"></canvas>
+      <!-- url mode -->
+      <iframe id="pdf-frame" allowfullscreen></iframe>
+    </div>
+  </div>
+
+  <!-- RESIZER -->
+  <div id="resizer"></div>
+
+  <!-- NOTES PANEL -->
+  <div id="notes-panel">
+
+    <!-- PAPER INFO -->
+    <div id="paper-info">
+      <input id="paper-title" placeholder="Paper Title..." oninput="us('info.title',this.value)">
+      <div class="meta-row">
+        <input class="meta-in" id="f-authors" placeholder="Authors"        oninput="us('info.authors',this.value)">
+        <input class="meta-in" id="f-year"    placeholder="Year"           oninput="us('info.year',this.value)"   style="max-width:58px" maxlength="4">
+        <input class="meta-in" id="f-venue"   placeholder="Venue"          oninput="us('info.venue',this.value)">
+      </div>
+      <div class="meta-row">
+        <input class="meta-in" id="f-link"  placeholder="Paper URL / DOI"  oninput="us('info.link',this.value)"  style="color:#2563eb;flex:2">
+        <input class="meta-in" id="f-field" placeholder="Field / Domain"   oninput="us('info.field',this.value)" style="max-width:110px">
+      </div>
+    </div>
+
+    <!-- LEGEND -->
+    <div id="legend-wrap">
+      <strong>Legend</strong>
+      <div id="legend-items"><span style="color:#a8a29e;font-style:italic;font-size:11px">Add items with labels below to build the legend</span></div>
+    </div>
+
+    <!-- ══ BEFORE READING ══ -->
+    <div class="phase-hdr">Before Reading</div>
+
+    <div class="sec before-sec">
+      <div class="sec-hdr" onclick="toggle('predict-approach')">
+        <span class="sec-title">My Predicted Approach</span>
+        <span class="sec-hint">Write before reading the method section</span>
+        <button class="sec-collapse" id="predict-approach-btn">&#9650;</button>
+      </div>
+      <div class="sec-body" id="predict-approach-body">
+        <p class="prompt">Before reading Section 3+ (Method): what approach would YOU take? What would you try first? Write this before seeing the paper's solution.</p>
+        <textarea id="f-predict-approach" placeholder="My predicted approach..." oninput="us('predictedApproach',this.value)"></textarea>
+      </div>
+    </div>
+
+    <div class="sec before-sec">
+      <div class="sec-hdr" onclick="toggle('predict-exps')">
+        <span class="sec-title">My Predicted Experiments</span>
+        <span class="sec-hint">Write before reading results</span>
+        <button class="sec-collapse" id="predict-exps-btn">&#9650;</button>
+      </div>
+      <div class="sec-body" id="predict-exps-body">
+        <p class="prompt">Before reading the experiments/results: what datasets, baselines, and metrics would you use? What is the single most decisive experiment?</p>
+        <textarea id="f-predict-exps" placeholder="My predicted experiments and evaluation design..." oninput="us('predictedExperiments',this.value)"></textarea>
+      </div>
+    </div>
+
+    <!-- ══ PAPER NOTES ══ -->
+    <div class="phase-hdr">Paper Notes</div>
+
+    <div class="sec sec-problem">
+      <div class="sec-hdr" onclick="toggle('problem')">
+        <span class="sec-title">Problem Statement</span>
+        <button class="sec-collapse" id="problem-btn">&#9650;</button>
+      </div>
+      <div class="sec-body" id="problem-body">
+        <p class="prompt">From the abstract/intro: what exact problem does this paper address? What gap exists in prior work?</p>
+        <textarea id="f-problem" placeholder="The core problem this paper addresses..." oninput="us('problemStatement',this.value)"></textarea>
+      </div>
+    </div>
+
+    <div class="sec sec-prior">
+      <div class="sec-hdr" onclick="toggle('prior')">
+        <span class="sec-title">Prior Assumption (Bit Flip Setup)</span>
+        <span class="sec-hint">What did ALL prior work assume?</span>
+        <button class="sec-collapse" id="prior-btn">&#9650;</button>
+      </div>
+      <div class="sec-body" id="prior-body">
+        <p class="prompt">Complete this after reading Related Work: "All prior work implicitly assumed ___. This paper challenges that by ___."</p>
+        <textarea id="f-prior" placeholder="All prior work assumed... This paper flips that by..." oninput="us('priorAssumption',this.value)"></textarea>
+      </div>
+    </div>
+
+    <!-- DYNAMIC SECTIONS -->
+    <div id="ds-definitions"       class="sec sec-d"></div>
+    <div id="ds-techniques"        class="sec sec-t"></div>
+    <div id="ds-insights"          class="sec sec-i"></div>
+    <div id="ds-bitFlips"          class="sec sec-b"></div>
+    <div id="ds-researchQuestions" class="sec sec-rq"></div>
+    <div id="ds-experiments"       class="sec sec-e"></div>
+
+    <!-- ══ MY ANALYSIS ══ -->
+    <div class="phase-hdr">My Analysis</div>
+
+    <div id="ds-myQuestions" class="sec sec-mq"></div>
+
+    <div class="sec sec-core">
+      <div class="sec-hdr" onclick="toggle('core-insight')">
+        <span class="sec-title">Core Insight</span>
+        <span class="sec-hint">One sentence — insight, not method</span>
+        <button class="sec-collapse" id="core-insight-btn">&#9650;</button>
+      </div>
+      <div class="sec-body" id="core-insight-body">
+        <p class="prompt">What is now <em>known</em> that wasn't before? Must be an insight (what is true), not a method (what they did) or result (what happened).</p>
+        <textarea id="f-core-insight" class="core-ta"
+          placeholder='e.g. "The optimal policy under KL-constrained RL can be expressed as a closed-form reparameterization of the data" — not "They removed the reward model"'
+          oninput="us('coreInsight',this.value);updateWordCount(this)"></textarea>
+        <div class="char-hint" id="core-hint">Aim for one clear sentence</div>
+      </div>
+    </div>
+
+    <div class="sec">
+      <div class="sec-hdr" onclick="toggle('extensions')">
+        <span class="sec-title">Extensions / Research Ideas</span>
+        <button class="sec-collapse" id="extensions-btn">&#9650;</button>
+      </div>
+      <div class="sec-body" id="extensions-body">
+        <p class="prompt">What directions does this open? Cross-domain analogies? What would you explore next?</p>
+        <textarea id="f-extensions" placeholder="Research extensions and ideas..." oninput="us('extensions',this.value)"></textarea>
+      </div>
+    </div>
+
+    <div class="sec">
+      <div class="sec-hdr" onclick="toggle('issues')">
+        <span class="sec-title">Issues / Limitations</span>
+        <button class="sec-collapse" id="issues-btn">&#9650;</button>
+      </div>
+      <div class="sec-body" id="issues-body">
+        <p class="prompt">Weaknesses, confounds, overclaimed results, missing ablations. What would a pre-mortem say?</p>
+        <textarea id="f-issues" placeholder="Weaknesses, limitations, and issues..." oninput="us('issues',this.value)"></textarea>
+      </div>
+    </div>
+
+    <div class="sec">
+      <div class="sec-hdr" onclick="toggle('apply')">
+        <span class="sec-title">Apply to Own Work</span>
+        <button class="sec-collapse" id="apply-btn">&#9650;</button>
+      </div>
+      <div class="sec-body" id="apply-body">
+        <p class="prompt">Does this paper's bit flip apply to your own research? What assumption in YOUR work could be challenged?</p>
+        <textarea id="f-apply" placeholder="How this connects to my own research..." oninput="us('applyToOwnWork',this.value)"></textarea>
+      </div>
+    </div>
+
+    <div id="notes-bottom-pad"></div>
+  </div><!-- end notes-panel -->
+</div><!-- end main -->
+
+<!-- SETTINGS MODAL -->
+<div class="overlay hidden" id="settings-modal">
+  <div class="modal">
+    <h2>Settings</h2>
+    <p><strong>Clear Current Notes</strong></p>
+    <p style="font-size:12px;color:#64748b;margin-bottom:8px">Export your notes first to avoid losing them.</p>
+    <div class="m-actions">
+      <button onclick="closeModal('settings-modal')">Close</button>
+      <button class="btn-danger" onclick="clearNotes()">Clear Notes</button>
+      <button class="btn-primary" onclick="saveSettings()">Save</button>
+    </div>
+  </div>
+</div>
+
+<script src="https://unpkg.com/pdfjs-dist@3.11.174/build/pdf.min.js"></script>
+<script>
+'use strict';
+
+// ─────────────────────────────────────────────
+//  SECTION CONFIG
+// ─────────────────────────────────────────────
+const SECTIONS = [
+  { key:'definitions',       pre:'D',  cls:'tag-d',  title:'Definitions / Notes',        ph:'Define a term or add a note...',             hint:'Key definitions and notes' },
+  { key:'techniques',        pre:'T',  cls:'tag-t',  title:'Techniques Used',             ph:'A technique or method used in the paper...', hint:'Methods, architectures, tricks' },
+  { key:'insights',          pre:'I',  cls:'tag-i',  title:'Insights',                    ph:'Something interesting or surprising...',     hint:'Insights from the paper' },
+  { key:'bitFlips',          pre:'B',  cls:'tag-b',  title:'Bit Flips',                   ph:'An assumption this paper overturns...',      hint:'Prior assumptions challenged' },
+  { key:'researchQuestions', pre:'RQ', cls:'tag-rq', title:"Paper's Research Questions",  ph:"A question the paper formally asks...",      hint:"Questions the paper sets out to answer" },
+  { key:'experiments',       pre:'E',  cls:'tag-e',  title:"Paper's Experiments",         ph:'An experiment, dataset, baseline, or metric...', hint:'Experiments and evaluation details' },
+  { key:'myQuestions',       pre:'MQ', cls:'tag-mq', title:'My Questions',                ph:'A question I want to explore...',            hint:'Your own questions and ideas' },
+];
+
+// ─────────────────────────────────────────────
+//  STATE
+// ─────────────────────────────────────────────
+const DEFAULTS = {
+  info:{ title:'', authors:'', year:'', venue:'', link:'', field:'' },
+  predictedApproach:'', predictedExperiments:'',
+  problemStatement:'', priorAssumption:'',
+  definitions:[], techniques:[], insights:[], bitFlips:[],
+  researchQuestions:[], experiments:[], myQuestions:[],
+  coreInsight:'', extensions:'', issues:'', applyToOwnWork:'',
+};
+
+let S = deepCopy(DEFAULTS);
+let saveTimer = null;
+
+function deepCopy(o) { return JSON.parse(JSON.stringify(o)); }
+
+function us(path, val) {
+  const keys = path.split('.');
+  let obj = S;
+  for (let i = 0; i < keys.length - 1; i++) obj = obj[keys[i]];
+  obj[keys[keys.length - 1]] = val;
+  queueSave();
+  updateLegend();
+}
+
+function queueSave() {
+  clearTimeout(saveTimer);
+  saveTimer = setTimeout(() => {
+    localStorage.setItem('pr_state', JSON.stringify(S));
+    setSaveLabel('Auto-saved ' + new Date().toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'}));
+  }, 700);
+}
+
+function setSaveLabel(txt) { document.getElementById('save-indicator').textContent = txt; }
+
+// ─────────────────────────────────────────────
+//  INIT
+// ─────────────────────────────────────────────
+window.addEventListener('DOMContentLoaded', () => {
+  pdfjsLib.GlobalWorkerOptions.workerSrc =
+    'https://unpkg.com/pdfjs-dist@3.11.174/build/pdf.worker.min.js';
+
+  const saved = localStorage.getItem('pr_state');
+  if (saved) {
+    try { S = Object.assign(deepCopy(DEFAULTS), JSON.parse(saved)); } catch(e) { /**/ }
+  }
+  SECTIONS.forEach(renderDynSection);
+  populateStatic();
+  updateLegend();
+  initResizer();
+
+  document.getElementById('pdf-input').addEventListener('change', e => {
+    if (e.target.files[0]) loadLocalPDF(e.target.files[0]);
+  });
+  document.getElementById('json-input').addEventListener('change', e => {
+    if (e.target.files[0]) importJSON(e.target.files[0]);
+  });
+  document.addEventListener('keydown', onKey);
+
+  // Hide controls initially (no PDF loaded yet)
+  document.getElementById('pdf-controls').style.display = 'none';
+  document.getElementById('url-mode-controls').style.display = 'none';
+});
+
+function populateStatic() {
+  const f = (id, v) => { const el = document.getElementById(id); if (el) el.value = v || ''; };
+  f('paper-title',        S.info.title);
+  f('f-authors',          S.info.authors);
+  f('f-year',             S.info.year);
+  f('f-venue',            S.info.venue);
+  f('f-link',             S.info.link);
+  f('f-field',            S.info.field);
+  f('f-predict-approach', S.predictedApproach);
+  f('f-predict-exps',     S.predictedExperiments);
+  f('f-problem',          S.problemStatement);
+  f('f-prior',            S.priorAssumption);
+  f('f-core-insight',     S.coreInsight);
+  f('f-extensions',       S.extensions);
+  f('f-issues',           S.issues);
+  f('f-apply',            S.applyToOwnWork);
+  const ci = document.getElementById('f-core-insight');
+  if (ci) updateWordCount(ci);
+}
+
+// ─────────────────────────────────────────────
+//  URL LOADING
+// ─────────────────────────────────────────────
+let currentPdfUrl = null;
+
+async function loadFromUrl() {
+  const raw = document.getElementById('url-input').value.trim();
+  if (!raw) return;
+
+  const parsed = parseUrl(raw);
+  setUrlStatus('loading', parsed.type, 'Loading PDF...');
+
+  // Fill link field immediately
+  autoFill('info.link', 'f-link', raw);
+
+  // Switch to iframe mode
+  switchToUrlMode(parsed.pdfUrl);
+
+  // Fetch metadata in background
+  fetchMeta(parsed).then(meta => {
+    if (!meta) return;
+    if (meta.title)   autoFill('info.title',   'paper-title', meta.title);
+    if (meta.authors) autoFill('info.authors',  'f-authors',   meta.authors);
+    if (meta.year)    autoFill('info.year',     'f-year',      meta.year);
+    if (meta.venue)   autoFill('info.venue',    'f-venue',     meta.venue);
+    setUrlStatus('ok', parsed.type, 'Metadata loaded');
+    setSaveLabel('Metadata auto-filled');
+  }).catch(() => {
+    setUrlStatus('ok', parsed.type, 'PDF loaded (no metadata)');
+  });
+}
+
+// Only auto-fill if the field is currently empty
+function autoFill(statePath, fieldId, value) {
+  const el = document.getElementById(fieldId);
+  if (!el || el.value.trim()) return; // don't overwrite existing content
+  el.value = value;
+  el.classList.add('autofilled');
+  setTimeout(() => el.classList.remove('autofilled'), 2000);
+  us(statePath, value);
+}
+
+function parseUrl(raw) {
+  const url = raw.trim();
+
+  // arxiv.org/abs/XXXX.XXXXX
+  const absMatch = url.match(/arxiv\.org\/abs\/([\d.]+(?:v\d+)?)/i);
+  if (absMatch) {
+    const id = absMatch[1];
+    return { pdfUrl: `https://arxiv.org/pdf/${id}`, type: 'arxiv', arxivId: id };
+  }
+
+  // arxiv.org/pdf/XXXX.XXXXX
+  const pdfMatch = url.match(/arxiv\.org\/pdf\/([\d.]+(?:v\d+)?)/i);
+  if (pdfMatch) {
+    const id = pdfMatch[1];
+    return { pdfUrl: url, type: 'arxiv', arxivId: id };
+  }
+
+  // openreview.net/forum?id=XXXX
+  const orForum = url.match(/openreview\.net\/forum\?id=([^&#\s]+)/i);
+  if (orForum) {
+    return { pdfUrl: `https://openreview.net/pdf?id=${orForum[1]}`, type: 'openreview', orId: orForum[1] };
+  }
+
+  // openreview.net/pdf?id=XXXX
+  const orPdf = url.match(/openreview\.net\/pdf\?id=([^&#\s]+)/i);
+  if (orPdf) {
+    return { pdfUrl: url, type: 'openreview', orId: orPdf[1] };
+  }
+
+  // openreview.net/attachment?id=...&name=pdf
+  const orAttach = url.match(/openreview\.net\/attachment\?.*?id=([^&#\s]+)/i);
+  if (orAttach) {
+    return { pdfUrl: url, type: 'openreview', orId: orAttach[1] };
+  }
+
+  // Anything that looks like a direct PDF URL or ends with .pdf
+  return { pdfUrl: url, type: url.toLowerCase().includes('.pdf') ? 'pdf' : 'pdf', arxivId: null };
+}
+
+async function fetchMeta(parsed) {
+  if (parsed.arxivId) return fetchArxivMeta(parsed.arxivId);
+  if (parsed.orId)    return fetchOpenReviewMeta(parsed.orId);
+  return null;
+}
+
+async function fetchArxivMeta(arxivId) {
+  // Strip version suffix for API query (API accepts versionless IDs)
+  const id = arxivId.replace(/v\d+$/i, '');
+  const resp = await fetch(`https://export.arxiv.org/api/query?id_list=${encodeURIComponent(id)}&max_results=1`);
+  if (!resp.ok) return null;
+  const text = await resp.text();
+  const xml  = new DOMParser().parseFromString(text, 'text/xml');
+  const entry = xml.querySelector('entry');
+  if (!entry) return null;
+
+  const title   = entry.querySelector('title')?.textContent?.trim().replace(/\s+/g, ' ') || '';
+  const authors = Array.from(entry.querySelectorAll('author name'))
+                       .map(n => n.textContent.trim()).join(', ');
+  const year    = entry.querySelector('published')?.textContent?.trim().slice(0, 4) || '';
+
+  return { title, authors, year };
+}
+
+async function fetchOpenReviewMeta(noteId) {
+  // Try openreview v2 API — has CORS headers
+  try {
+    const resp = await fetch(`https://api2.openreview.net/notes/${encodeURIComponent(noteId)}`);
+    if (!resp.ok) throw new Error('not ok');
+    const data = await resp.json();
+    const c = data.content || {};
+    const title   = c.title?.value   || c.title   || '';
+    const authorsArr = c.authors?.value || c.authors || [];
+    const authors = Array.isArray(authorsArr) ? authorsArr.join(', ') : authorsArr;
+    // Try to extract venue from invitations
+    const inv = (data.invitations || []).join(' ');
+    const venueMatch = inv.match(/(ICLR|NeurIPS|ICML|ICCV|CVPR|EMNLP|ACL|NAACL|ECCV|AAAI|IJCAI)\b[^/]*/i);
+    const venue = venueMatch ? venueMatch[0].replace(/\//g,' ').trim() : '';
+    return { title, authors, venue };
+  } catch(_) { /**/ }
+
+  // Fallback: try v1 API
+  try {
+    const resp = await fetch(`https://api.openreview.net/notes?id=${encodeURIComponent(noteId)}`);
+    if (!resp.ok) throw new Error('not ok');
+    const data = await resp.json();
+    const note = data.notes?.[0];
+    if (!note) return null;
+    const c = note.content || {};
+    const title = c.title || '';
+    const authorsArr = c.authors || [];
+    const authors = Array.isArray(authorsArr) ? authorsArr.join(', ') : authorsArr;
+    return { title, authors };
+  } catch(_) { return null; }
+}
+
+function setUrlStatus(state, type, msg) {
+  const txt = document.getElementById('url-status-txt');
+  const badges = { arxiv: 'badge-arxiv', openreview: 'badge-openreview', pdf: 'badge-pdf' };
+  const cls    = state === 'ok' ? 'status-ok' : state === 'err' ? 'status-err' : 'status-loading';
+  const badge  = badges[type] || 'badge-pdf';
+  const typeLabel = type === 'arxiv' ? 'arXiv' : type === 'openreview' ? 'OpenReview' : 'PDF';
+  txt.innerHTML = `<span class="status-badge ${badge}">${typeLabel}</span> <span class="${cls}">${esc(msg)}</span>`;
+}
+
+function switchToUrlMode(pdfUrl) {
+  currentPdfUrl = pdfUrl;
+  document.getElementById('pdf-placeholder').style.display = 'none';
+  document.getElementById('pdf-canvas').style.display = 'none';
+  document.getElementById('pdf-controls').style.display = 'none';
+  document.getElementById('url-mode-controls').style.display = 'flex';
+  const frame = document.getElementById('pdf-frame');
+  frame.style.display = 'block';
+  frame.src = pdfUrl;
+  // Scroll notes panel to top to show the fresh paper info
+  document.getElementById('notes-panel').scrollTop = 0;
+}
+
+function openCurrentInTab() {
+  if (currentPdfUrl) window.open(currentPdfUrl, '_blank');
+}
+
+function focusUrlInput() {
+  document.getElementById('url-input').focus();
+}
+
+// ─────────────────────────────────────────────
+//  DYNAMIC SECTIONS
+// ─────────────────────────────────────────────
+function renderDynSection(cfg) {
+  const el = document.getElementById('ds-' + cfg.key);
+  if (!el) return;
+  const items = S[cfg.key] || [];
+  el.innerHTML = `
+    <div class="sec-hdr" onclick="toggle('dyn-${cfg.key}')">
+      <span class="i-tag ${cfg.cls}" style="font-size:10px">${cfg.pre}</span>
+      <span class="sec-title">${cfg.title}</span>
+      <span class="sec-hint">${cfg.hint}</span>
+      <button class="add-btn" onclick="event.stopPropagation();addItem('${cfg.key}')" title="Add ${cfg.pre} item">+ Add</button>
+      <button class="sec-collapse" id="dyn-${cfg.key}-btn">&#9650;</button>
+    </div>
+    <div class="sec-body" id="dyn-${cfg.key}-body">
+      ${items.length === 0 ? '<p class="empty-msg">No items yet — click + Add to start.</p>' : ''}
+      ${items.map((item, i) => renderItem(cfg, item, i)).join('')}
+    </div>`;
+}
+
+function renderItem(cfg, item, i) {
+  const tag = cfg.pre + (i + 1);
+  return `
+    <div class="item-wrap" id="iw-${cfg.key}-${i}">
+      <div class="item-hdr">
+        <span class="i-tag ${cfg.cls}">[${tag}]</span>
+        <input class="i-label" placeholder="Short label (appears in legend)" value="${esc(item.label||'')}"
+               oninput="updateLabel('${cfg.key}',${i},this.value)">
+        <button class="del-btn" onclick="delItem('${cfg.key}',${i})" title="Delete">&#215;</button>
+      </div>
+      <textarea class="i-text" placeholder="${esc(cfg.ph)}"
+                oninput="updateText('${cfg.key}',${i},this.value)">${esc(item.text||'')}</textarea>
+    </div>`;
+}
+
+function addItem(key) {
+  if (!S[key]) S[key] = [];
+  S[key].push({ label:'', text:'' });
+  const cfg = SECTIONS.find(c => c.key === key);
+  renderDynSection(cfg);
+  const idx = S[key].length - 1;
+  const wrap = document.getElementById(`iw-${key}-${idx}`);
+  if (wrap) { const ta = wrap.querySelector('textarea'); if (ta) ta.focus(); }
+  queueSave();
+}
+
+function delItem(key, i) {
+  S[key].splice(i, 1);
+  renderDynSection(SECTIONS.find(c => c.key === key));
+  updateLegend(); queueSave();
+}
+
+function updateLabel(key, i, v) {
+  if (S[key]?.[i]) { S[key][i].label = v; updateLegend(); queueSave(); }
+}
+
+function updateText(key, i, v) {
+  if (S[key]?.[i]) { S[key][i].text = v; queueSave(); }
+}
+
+// ─────────────────────────────────────────────
+//  LEGEND
+// ─────────────────────────────────────────────
+function updateLegend() {
+  const items = [];
+  SECTIONS.forEach(cfg => {
+    (S[cfg.key]||[]).forEach((item,i) => {
+      if (item.label?.trim()) items.push({ tag: cfg.pre+(i+1), label: item.label.trim(), cls: cfg.cls });
+    });
+  });
+  const el = document.getElementById('legend-items');
+  if (items.length === 0) {
+    el.innerHTML = '<span style="color:#a8a29e;font-style:italic;font-size:11px">Add items with labels below to build the legend</span>';
+  } else {
+    el.innerHTML = items.map(x =>
+      `<span class="l-item"><span class="l-tag ${x.cls}">[${esc(x.tag)}]</span><span class="l-label">${esc(x.label)}</span></span>`
+    ).join('');
+  }
+}
+
+// ─────────────────────────────────────────────
+//  COLLAPSE
+// ─────────────────────────────────────────────
+function toggle(id) {
+  const body = document.getElementById(id + '-body');
+  const btn  = document.getElementById(id + '-btn');
+  if (!body) return;
+  const collapsed = body.classList.toggle('collapsed');
+  if (btn) btn.innerHTML = collapsed ? '&#9660;' : '&#9650;';
+}
+
+// ─────────────────────────────────────────────
+//  LOCAL PDF VIEWER (PDF.js)
+// ─────────────────────────────────────────────
+let pdfDoc = null, curPage = 1, zoomLvl = 1.0;
+
+async function loadLocalPDF(file) {
+  try {
+    const data = await file.arrayBuffer();
+    pdfDoc = await pdfjsLib.getDocument({ data }).promise;
+    document.getElementById('page-total').textContent = '/ ' + pdfDoc.numPages;
+    document.getElementById('page-input').max = pdfDoc.numPages;
+
+    // Switch to file mode UI
+    document.getElementById('pdf-placeholder').style.display = 'none';
+    document.getElementById('pdf-frame').style.display = 'none';
+    document.getElementById('pdf-frame').src = '';
+    document.getElementById('url-mode-controls').style.display = 'none';
+    document.getElementById('pdf-canvas').style.display = 'block';
+    document.getElementById('pdf-controls').style.display = 'flex';
+
+    currentPdfUrl = null;
+    curPage = 1; zoomLvl = 1.0;
+    await renderPage(1);
+    setUrlStatus('ok', 'pdf', 'Local file loaded');
+  } catch(e) {
+    alert('Could not load PDF: ' + e.message);
+    console.error(e);
+  }
+}
+
+async function renderPage(n) {
+  if (!pdfDoc) return;
+  n = Math.max(1, Math.min(n, pdfDoc.numPages));
+  const page = await pdfDoc.getPage(n);
+  const canvas = document.getElementById('pdf-canvas');
+  const container = document.getElementById('pdf-container');
+
+  const base   = page.getViewport({ scale: 1 });
+  const fitScale = (container.clientWidth - 28) / base.width;
+  const vp     = page.getViewport({ scale: fitScale * zoomLvl });
+
+  canvas.width  = vp.width;
+  canvas.height = vp.height;
+  const ctx = canvas.getContext('2d');
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+  await page.render({ canvasContext: ctx, viewport: vp }).promise;
+
+  curPage = n;
+  document.getElementById('page-input').value = n;
+  document.getElementById('zoom-lbl').textContent = Math.round(zoomLvl * 100) + '%';
+  container.scrollTop = 0;
+}
+
+function prevPage() { if (curPage > 1) renderPage(curPage - 1); }
+function nextPage() { if (pdfDoc && curPage < pdfDoc.numPages) renderPage(curPage + 1); }
+function goToPage(v) { const n = parseInt(v); if (!isNaN(n)) renderPage(n); }
+function zoom(d) { zoomLvl = Math.max(0.3, Math.min(4.0, zoomLvl + d)); renderPage(curPage); }
+function fitW() { zoomLvl = 1.0; renderPage(curPage); }
+
+function onKey(e) {
+  if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') {
+    if (e.ctrlKey && e.key === 's') { e.preventDefault(); exportJSON(); }
+    return;
+  }
+  if (e.key === 'ArrowLeft'  || e.key === 'ArrowUp')   prevPage();
+  if (e.key === 'ArrowRight' || e.key === 'ArrowDown') nextPage();
+  if (e.key === '+' || e.key === '=') zoom(+0.25);
+  if (e.key === '-') zoom(-0.25);
+}
+
+// ─────────────────────────────────────────────
+//  SAVE / LOAD / EXPORT
+// ─────────────────────────────────────────────
+function exportJSON() {
+  const slug = (S.info.title||'paper').toLowerCase().replace(/[^a-z0-9]+/g,'-').slice(0,40);
+  download(JSON.stringify(S, null, 2), slug+'-notes.json', 'application/json');
+  setSaveLabel('Saved to file');
+}
+
+function importJSON(file) {
+  const r = new FileReader();
+  r.onload = e => {
+    try {
+      S = Object.assign(deepCopy(DEFAULTS), JSON.parse(e.target.result));
+      SECTIONS.forEach(renderDynSection); populateStatic(); updateLegend();
+      setSaveLabel('Loaded from file');
+    } catch(err) { alert('Invalid JSON: ' + err.message); }
+  };
+  r.readAsText(file);
+}
+
+function exportHTML() {
+  const slug = (S.info.title||'paper').toLowerCase().replace(/[^a-z0-9]+/g,'-').slice(0,40);
+  download(buildDocHTML(), slug+'-notes.html', 'text/html');
+  setSaveLabel('HTML exported');
+}
+
+function newPaper() {
+  const hasData = S.info.title || S.problemStatement || S.coreInsight || S.definitions.length;
+  if (hasData && !confirm('Start a new paper? Export notes first to save them.')) return;
+  S = deepCopy(DEFAULTS);
+  SECTIONS.forEach(renderDynSection); populateStatic(); updateLegend();
+  localStorage.removeItem('pr_state');
+  setSaveLabel('New paper');
+}
+
+function clearNotes() {
+  if (confirm('Clear all notes?')) { newPaper(); closeModal('settings-modal'); }
+}
+
+function download(content, name, type) {
+  const url = URL.createObjectURL(new Blob([content], { type }));
+  const a = document.createElement('a');
+  a.href = url; a.download = name; a.click();
+  URL.revokeObjectURL(url);
+}
+
+// ─────────────────────────────────────────────
+//  GOOGLE DOCS EXPORT
+//  POSTs to /api/export (Vercel serverless function).
+//  That function holds the Apps Script URL in an env var —
+//  it is never sent to the browser.
+// ─────────────────────────────────────────────
+async function handleGDocs() {
+  setSaveLabel('Creating Google Doc...');
+  try {
+    const res = await fetch('/api/export', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ title: S.info.title || 'Paper Notes', html: buildDocHTML() }),
+    });
+    const data = await res.json();
+    if (!res.ok || data.error) throw new Error(data.error || 'Export failed');
+    setSaveLabel('Google Doc created!');
+    window.open(data.url, '_blank');
+  } catch (e) {
+    setSaveLabel('Export failed');
+    if (e.message.includes('Failed to fetch') || e.message.includes('Load failed')) {
+      alert('Google Docs export only works when deployed on Vercel.\n\nFor local use, click "Export HTML" — then upload that file to drive.google.com and Google will convert it to a Doc automatically.');
+    } else {
+      alert('Export failed: ' + e.message);
+    }
+    console.error(e);
+  }
+}
+
+// ─────────────────────────────────────────────
+//  BUILD DOCUMENT HTML
+// ─────────────────────────────────────────────
+function buildDocHTML() {
+  const s = S;
+  const n2b = t => (t||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/\n/g,'<br>');
+  const e = esc;
+
+  const legendItems = [];
+  SECTIONS.forEach(cfg => {
+    (s[cfg.key]||[]).forEach((item,i) => {
+      if (item.label?.trim()) legendItems.push({ tag:cfg.pre+(i+1), label:item.label.trim(), cls:cfg.cls });
+    });
+  });
+
+  let h = `<!DOCTYPE html><html><head><meta charset="UTF-8">
+<style>
+  body{font-family:Arial,sans-serif;max-width:800px;margin:40px auto;color:#1e293b;line-height:1.6}
+  h1{font-size:22px;color:#0f172a;margin-bottom:6px}
+  h2{font-size:15px;color:#334155;border-bottom:2px solid #e2e8f0;padding-bottom:4px;margin-top:28px;text-transform:uppercase;letter-spacing:.05em}
+  h3{font-size:13px;color:#475569;margin:16px 0 6px;font-weight:700}
+  .meta{font-size:12px;color:#64748b;margin:2px 0}
+  .legend-box{background:#fefce8;border:1px solid #fde68a;padding:10px 14px;border-radius:6px;margin:14px 0;font-size:12px}
+  .legend-box strong{display:block;font-size:10px;text-transform:uppercase;letter-spacing:.05em;color:#92400e;margin-bottom:6px}
+  .ltag{display:inline-block;padding:1px 6px;border-radius:3px;color:white;font-size:10px;font-weight:700;margin-right:2px}
+  .tag-d{background:#3b82f6}.tag-t{background:#10b981}.tag-i{background:#8b5cf6}
+  .tag-b{background:#f59e0b}.tag-rq{background:#ef4444}.tag-e{background:#06b6d4}.tag-mq{background:#ec4899}
+  .phase{font-size:9px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:#94a3b8;margin:28px 0 10px;border-top:1px solid #e2e8f0;padding-top:14px}
+  .predict-box{background:#fffbeb;border:1px solid #fde68a;padding:12px;border-radius:6px;margin:6px 0;font-size:13px}
+  .item{margin:8px 0;padding:10px 14px;border-left:3px solid #e2e8f0;background:#f8fafc;border-radius:0 6px 6px 0}
+  .itag{display:inline-block;padding:1px 6px;border-radius:3px;color:white;font-size:10px;font-weight:700}
+  .core-p{font-size:15px;font-weight:600;padding:12px;background:#f0fdf4;border-left:4px solid #16a34a;border-radius:0 8px 8px 0}
+  p{font-size:13px;margin:6px 0}hr{border:none;border-top:1px solid #e2e8f0;margin:24px 0}
+</style></head><body>`;
+
+  h += `<h1>${e(s.info.title||'Untitled Paper')}</h1>`;
+  if (s.info.authors) h += `<p class="meta"><b>Authors:</b> ${e(s.info.authors)}</p>`;
+  if (s.info.year||s.info.venue)
+    h += `<p class="meta">${s.info.year?`<b>Year:</b> ${e(s.info.year)}`:''}${s.info.year&&s.info.venue?' &nbsp;|&nbsp; ':''}${s.info.venue?`<b>Venue:</b> ${e(s.info.venue)}`:''}</p>`;
+  if (s.info.link)  h += `<p class="meta"><b>Link:</b> <a href="${e(s.info.link)}">${e(s.info.link)}</a></p>`;
+  if (s.info.field) h += `<p class="meta"><b>Field:</b> ${e(s.info.field)}</p>`;
+
+  if (legendItems.length > 0) {
+    h += `<div class="legend-box"><strong>Legend</strong>`;
+    h += legendItems.map(x => `<span class="ltag ${x.cls}">[${e(x.tag)}]</span> ${e(x.label)}`).join(' &nbsp;&nbsp; ');
+    h += `</div>`;
+  }
+  h += '<hr>';
+
+  if (s.predictedApproach||s.predictedExperiments) {
+    h += `<p class="phase">Before Reading</p>`;
+    if (s.predictedApproach)    h += `<h3>My Predicted Approach</h3><div class="predict-box">${n2b(s.predictedApproach)}</div>`;
+    if (s.predictedExperiments) h += `<h3>My Predicted Experiments</h3><div class="predict-box">${n2b(s.predictedExperiments)}</div>`;
+  }
+
+  h += `<p class="phase">Paper Notes</p>`;
+  if (s.problemStatement) h += `<h3>Problem Statement</h3><p>${n2b(s.problemStatement)}</p>`;
+  if (s.priorAssumption)  h += `<h3>Prior Assumption (Bit Flip Setup)</h3><p>${n2b(s.priorAssumption)}</p>`;
+
+  [
+    { key:'definitions',       pre:'D',  cls:'tag-d',  title:'Definitions / Notes' },
+    { key:'techniques',        pre:'T',  cls:'tag-t',  title:'Techniques Used' },
+    { key:'insights',          pre:'I',  cls:'tag-i',  title:'Insights' },
+    { key:'bitFlips',          pre:'B',  cls:'tag-b',  title:'Bit Flips' },
+    { key:'researchQuestions', pre:'RQ', cls:'tag-rq', title:"Paper's Research Questions" },
+    { key:'experiments',       pre:'E',  cls:'tag-e',  title:"Paper's Experiments" },
+  ].forEach(sec => {
+    const items = (s[sec.key]||[]).filter(x => x.text||x.label);
+    if (!items.length) return;
+    h += `<h3>${sec.title}</h3>`;
+    items.forEach((item,i) => {
+      h += `<div class="item"><span class="itag ${sec.cls}">[${sec.pre}${i+1}]</span>`;
+      if (item.label) h += ` <b>${e(item.label)}</b>`;
+      if (item.text)  h += `<br><p>${n2b(item.text)}</p>`;
+      h += `</div>`;
+    });
+  });
+
+  h += `<p class="phase">My Analysis</p>`;
+  const myQs = (s.myQuestions||[]).filter(x => x.text||x.label);
+  if (myQs.length) {
+    h += `<h3>My Questions</h3>`;
+    myQs.forEach((item,i) => {
+      h += `<div class="item"><span class="itag tag-mq">[MQ${i+1}]</span>`;
+      if (item.label) h += ` <b>${e(item.label)}</b>`;
+      if (item.text)  h += `<br><p>${n2b(item.text)}</p>`;
+      h += `</div>`;
+    });
+  }
+  if (s.coreInsight)    h += `<h3>Core Insight</h3><p class="core-p">${n2b(s.coreInsight)}</p>`;
+  if (s.extensions)     h += `<h3>Extensions / Research Ideas</h3><p>${n2b(s.extensions)}</p>`;
+  if (s.issues)         h += `<h3>Issues / Limitations</h3><p>${n2b(s.issues)}</p>`;
+  if (s.applyToOwnWork) h += `<h3>Apply to Own Work</h3><p>${n2b(s.applyToOwnWork)}</p>`;
+
+  h += `</body></html>`;
+  return h;
+}
+
+// ─────────────────────────────────────────────
+//  SETTINGS / MODALS
+// ─────────────────────────────────────────────
+function openSettings() {
+  document.getElementById('settings-modal').classList.remove('hidden');
+}
+function saveSettings() {
+  closeModal('settings-modal');
+}
+function closeModal(id) { document.getElementById(id).classList.add('hidden'); }
+
+// ─────────────────────────────────────────────
+//  RESIZER
+// ─────────────────────────────────────────────
+function initResizer() {
+  const r = document.getElementById('resizer');
+  const p = document.getElementById('pdf-panel');
+  let on=false, sx=0, sw=0;
+  r.addEventListener('mousedown', e => {
+    on=true; sx=e.clientX; sw=p.offsetWidth;
+    r.classList.add('active');
+    document.body.style.cssText += ';cursor:col-resize;user-select:none';
+  });
+  document.addEventListener('mousemove', e => {
+    if (!on) return;
+    const max = document.getElementById('main').offsetWidth - 300;
+    p.style.width = Math.max(280, Math.min(max, sw + e.clientX - sx)) + 'px';
+  });
+  document.addEventListener('mouseup', () => {
+    if (!on) return;
+    on=false; r.classList.remove('active');
+    document.body.style.cursor=''; document.body.style.userSelect='';
+    if (pdfDoc) renderPage(curPage);
+  });
+}
+
+// ─────────────────────────────────────────────
+//  UTILS
+// ─────────────────────────────────────────────
+function esc(s) {
+  return (s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+function updateWordCount(el) {
+  const w = (el.value||'').trim().split(/\s+/).filter(Boolean).length;
+  const h = document.getElementById('core-hint');
+  if (h) h.textContent = w===0 ? 'Aim for one clear sentence' : `${w} word${w===1?'':'s'} — aim for one sentence`;
+}
+</script>
+</body>
+</html>
