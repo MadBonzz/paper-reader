@@ -24,7 +24,7 @@
 function doPost(e) {
   try {
     const data  = JSON.parse(e.postData.contents);
-    const title = 'Paper Notes – ' + (data.title || 'Untitled');
+    const title = data.title || 'Paper Notes';
     const html  = data.html  || '';
 
     // Upload the HTML and have Drive convert it to a Google Doc automatically.

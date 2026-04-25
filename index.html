@@ -941,7 +941,10 @@ async function confirmGDocsExport() {
       body: JSON.stringify({ title: name, html: buildDocHTML() }),
     });
     const data = await res.json();
-    if (!res.ok || data.error) throw new Error(data.error || 'Export failed');
+    if (!res.ok || data.error) {
+      const msg = (data.error || 'Export failed') + (data.snippet ? '\n\nResponse snippet:\n' + data.snippet : '');
+      throw new Error(msg);
+    }
     setSaveLabel('Google Doc created!');
     window.open(data.url, '_blank');
   } catch (e) {
