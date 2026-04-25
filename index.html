@@ -910,64 +910,127 @@ function expandSection(bodyId) {
 // ─────────────────────────────────────────────
 //  LIST AUTOFORMAT IN TEXTAREAS
 //  Mimics Google Docs: Enter continues a numbered/bulleted list,
-//  Tab indents, empty list line exits the list.
+//  Tab indents and rotates the marker style by depth, empty list
+//  line exits the list.
+//
+//  Marker style by indent level (cycles every 3):
+//    Ordered: 1.  →  a.  →  i.
+//    Bullet : -   →  *   →  +
 // ─────────────────────────────────────────────
+const ORD_STYLES = ['decimal', 'alpha', 'roman'];
+const BUL_MARKS  = ['-', '*', '+'];
+const ROMAN_VALS = [['m',1000],['cm',900],['d',500],['cd',400],['c',100],['xc',90],['l',50],['xl',40],['x',10],['ix',9],['v',5],['iv',4],['i',1]];
+
+function ordStyleAt(level)  { return ORD_STYLES[level % ORD_STYLES.length]; }
+function bulMarkAt(level)   { return BUL_MARKS[level % BUL_MARKS.length]; }
+function indentLevel(spaces){ return Math.floor(spaces / 2); }
+
+function numToAlpha(n) {
+  let r = '';
+  while (n > 0) { n--; r = String.fromCharCode(97 + n % 26) + r; n = Math.floor(n / 26); }
+  return r || 'a';
+}
+function alphaToNum(s) {
+  let n = 0;
+  for (const c of s.toLowerCase()) n = n * 26 + (c.charCodeAt(0) - 96);
+  return n || 1;
+}
+function numToRoman(n) {
+  let r = '';
+  for (const [sym, val] of ROMAN_VALS) while (n >= val) { r += sym; n -= val; }
+  return r || 'i';
+}
+function romanToNum(s) {
+  const map = {i:1,v:5,x:10,l:50,c:100,d:500,m:1000};
+  let n = 0;
+  s = s.toLowerCase();
+  for (let i = 0; i < s.length; i++) {
+    const cur = map[s[i]] || 0;
+    const next = map[s[i+1]] || 0;
+    n += cur < next ? -cur : cur;
+  }
+  return n || 1;
+}
+function formatOrd(n, style) {
+  if (style === 'alpha') return numToAlpha(n) + '.';
+  if (style === 'roman') return numToRoman(n) + '.';
+  return n + '.';
+}
+function parseOrd(marker, style) {
+  if (style === 'alpha' && /^[a-z]+$/i.test(marker)) return alphaToNum(marker);
+  if (style === 'roman' && /^[ivxlcdm]+$/i.test(marker)) return romanToNum(marker);
+  const n = parseInt(marker, 10);
+  return isNaN(n) ? 1 : n;
+}
+
 function handleListKey(e) {
   const ta = e.target;
   if (ta.tagName !== 'TEXTAREA') return;
   const start = ta.selectionStart, end = ta.selectionEnd;
   const value = ta.value;
+  const lineStart = value.lastIndexOf('\n', start - 1) + 1;
+  const currentLine = value.substring(lineStart, start);
 
-  if (e.key === 'Enter' && !e.shiftKey && start === end) {
-    const lineStart = value.lastIndexOf('\n', start - 1) + 1;
-    const currentLine = value.substring(lineStart, start);
-    const numMatch = currentLine.match(/^(\s*)(\d+)\.\s(.*)$/);
-    const bulMatch = currentLine.match(/^(\s*)([-*+])\s(.*)$/);
+  // Match either an ordered marker (digits / alpha / roman) or a bullet marker
+  const ordMatch = currentLine.match(/^(\s*)([a-z]+|\d+)\.(\s+)(.*)$/i);
+  const bulMatch = currentLine.match(/^(\s*)([-*+])(\s+)(.*)$/);
+  const m = ordMatch || bulMatch;
+  const isOrdered = !!ordMatch;
 
-    if (numMatch || bulMatch) {
-      e.preventDefault();
-      const indent = (numMatch || bulMatch)[1];
-      const content = numMatch ? numMatch[3] : bulMatch[3];
+  if (e.key === 'Enter' && !e.shiftKey && start === end && m) {
+    e.preventDefault();
+    const indent = m[1], marker = m[2], content = m[4];
+    const level = indentLevel(indent.length);
 
-      let newValue, newPos;
-      if (!content.trim()) {
-        // Empty list item — exit the list
-        newValue = value.substring(0, lineStart) + value.substring(start);
-        newPos = lineStart;
-      } else {
-        const prefix = numMatch
-          ? '\n' + indent + (parseInt(numMatch[2]) + 1) + '. '
-          : '\n' + indent + bulMatch[2] + ' ';
-        newValue = value.substring(0, start) + prefix + value.substring(start);
-        newPos = start + prefix.length;
-      }
-      ta.value = newValue;
-      ta.selectionStart = ta.selectionEnd = newPos;
-      ta.dispatchEvent(new Event('input', { bubbles: true }));
-    }
-  } else if (e.key === 'Tab') {
-    const lineStart = value.lastIndexOf('\n', start - 1) + 1;
-    const currentLine = value.substring(lineStart, start);
-    const isListLine = /^\s*(\d+\.|[-*+])\s/.test(currentLine);
-
-    if (e.shiftKey) {
-      if (currentLine.startsWith('  ')) {
-        e.preventDefault();
-        ta.value = value.substring(0, lineStart) + value.substring(lineStart + 2);
-        ta.selectionStart = ta.selectionEnd = start - 2;
-        ta.dispatchEvent(new Event('input', { bubbles: true }));
-      }
+    let newValue, newPos;
+    if (!content.trim()) {
+      // Empty list item — exit the list
+      newValue = value.substring(0, lineStart) + value.substring(start);
+      newPos = lineStart;
     } else {
-      e.preventDefault();
-      if (isListLine) {
-        ta.value = value.substring(0, lineStart) + '  ' + value.substring(lineStart);
-        ta.selectionStart = ta.selectionEnd = start + 2;
+      let prefix;
+      if (isOrdered) {
+        const style = ordStyleAt(level);
+        const cur = parseOrd(marker, style);
+        prefix = '\n' + indent + formatOrd(cur + 1, style) + ' ';
       } else {
-        ta.value = value.substring(0, start) + '  ' + value.substring(start);
-        ta.selectionStart = ta.selectionEnd = start + 2;
+        prefix = '\n' + indent + marker + ' ';
       }
-      ta.dispatchEvent(new Event('input', { bubbles: true }));
+      newValue = value.substring(0, start) + prefix + value.substring(start);
+      newPos = start + prefix.length;
     }
+    ta.value = newValue;
+    ta.selectionStart = ta.selectionEnd = newPos;
+    ta.dispatchEvent(new Event('input', { bubbles: true }));
+  } else if (e.key === 'Tab' && m) {
+    e.preventDefault();
+    const indent = m[1], marker = m[2], sep = m[3];
+    const oldPrefix = indent + marker + (isOrdered ? '.' : '') + sep;
+    let newIndent;
+    if (e.shiftKey) {
+      if (indent.length < 2) return;
+      newIndent = indent.substring(2);
+    } else {
+      newIndent = indent + '  ';
+    }
+    const newLevel = indentLevel(newIndent.length);
+    const newMarker = isOrdered
+      ? formatOrd(1, ordStyleAt(newLevel))
+      : bulMarkAt(newLevel);
+    const newPrefix = newIndent + newMarker + ' ';
+
+    const before = value.substring(0, lineStart);
+    const after  = value.substring(lineStart + oldPrefix.length);
+    ta.value = before + newPrefix + after;
+    const delta = newPrefix.length - oldPrefix.length;
+    ta.selectionStart = ta.selectionEnd = start + delta;
+    ta.dispatchEvent(new Event('input', { bubbles: true }));
+  } else if (e.key === 'Tab' && !e.shiftKey) {
+    // Non-list line: insert a soft-tab (2 spaces)
+    e.preventDefault();
+    ta.value = value.substring(0, start) + '  ' + value.substring(start);
+    ta.selectionStart = ta.selectionEnd = start + 2;
+    ta.dispatchEvent(new Event('input', { bubbles: true }));
   }
 }
 
@@ -992,13 +1055,13 @@ function listToHTML(text) {
   };
 
   for (const line of lines) {
-    const numMatch = line.match(/^(\s*)(\d+)\.\s+(.*)$/);
+    const ordMatch = line.match(/^(\s*)([a-z]+|\d+)\.\s+(.*)$/i);
     const bulMatch = line.match(/^(\s*)[-*+]\s+(.*)$/);
-    if (numMatch || bulMatch) {
+    if (ordMatch || bulMatch) {
       flushPara();
-      const indent = (numMatch || bulMatch)[1].length;
-      const type = numMatch ? 'ol' : 'ul';
-      const content = numMatch ? numMatch[3] : bulMatch[2];
+      const indent = (ordMatch || bulMatch)[1].length;
+      const type = ordMatch ? 'ol' : 'ul';
+      const content = ordMatch ? ordMatch[3] : bulMatch[2];
       while (stack.length && stack[stack.length - 1].indent > indent) {
         out.push(`</${stack.pop().type}>`);
       }
