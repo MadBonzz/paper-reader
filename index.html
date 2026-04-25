@@ -562,12 +562,34 @@ function queueSave() {
 
 function setSaveLabel(txt) { document.getElementById('save-indicator').textContent = txt; }
 
+async function checkDeploymentVersion() {
+  try {
+    const res = await fetch('/api/version', { cache: 'no-store' });
+    if (!res.ok) return;
+    const { version } = await res.json();
+    if (!version) return;
+    const stored = localStorage.getItem('pr_version');
+    if (stored && stored !== version) {
+      // New deployment — wipe stale notes so the user starts fresh.
+      localStorage.removeItem('pr_state');
+      console.log(`[paper-reader] deploy changed (${stored} → ${version}); cleared saved notes`);
+    }
+    localStorage.setItem('pr_version', version);
+  } catch (e) {
+    // Ignore — happens in local dev (no /api/version) or if offline.
+  }
+}
+
 // ─────────────────────────────────────────────
 //  INIT
 // ─────────────────────────────────────────────
-window.addEventListener('DOMContentLoaded', () => {
+window.addEventListener('DOMContentLoaded', async () => {
   pdfjsLib.GlobalWorkerOptions.workerSrc =
     'https://unpkg.com/pdfjs-dist@3.11.174/build/pdf.worker.min.js';
+
+  // If the deployed version changed since last visit, drop saved notes
+  // before reading them. Survives normal reloads, resets on each deploy.
+  await checkDeploymentVersion();
 
   const saved = localStorage.getItem('pr_state');
   if (saved) {
