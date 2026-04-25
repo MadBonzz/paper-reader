@@ -35,6 +35,12 @@ export default async function handler(req, res) {
     while (response.status >= 300 && response.status < 400 && hops < 5) {
       const location = response.headers.get('location');
       if (!location) break;
+      // If the redirect target is outside Apps Script's domain, it IS the
+      // result URL (Drive creates the file and returns 302 → docs.google.com).
+      // POSTing to docs.google.com would return 405, so capture it as success.
+      if (!/script\.google(?:usercontent)?\.com/i.test(location)) {
+        return res.status(200).json({ url: location });
+      }
       response = await fetch(location, opts);
       hops++;
     }

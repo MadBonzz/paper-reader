@@ -132,10 +132,15 @@ button:hover { background: #334155; color: #f8fafc; }
 
 /* PHASE HEADER */
 .phase-hdr {
-  padding: 5px 14px; font-size: 9px; font-weight: 700; letter-spacing: 0.14em;
-  text-transform: uppercase; color: #94a3b8; background: #f1f5f9;
-  border-top: 1px solid #e2e8f0; border-bottom: 1px solid #e2e8f0; margin-top: 3px;
+  padding: 7px 14px; font-size: 10px; font-weight: 700; letter-spacing: 0.14em;
+  text-transform: uppercase; color: #475569; background: #e2e8f0;
+  border-top: 1px solid #cbd5e1; border-bottom: 1px solid #cbd5e1; margin-top: 3px;
+  cursor: pointer; user-select: none; display: flex; align-items: center; gap: 8px;
 }
+.phase-hdr:hover { background: #cbd5e1; }
+.ph-arrow { font-size: 10px; color: #64748b; transition: transform 0.15s; }
+.phase-hdr.collapsed .ph-arrow { transform: rotate(-90deg); }
+.phase-group.collapsed { display: none; }
 
 /* SECTION */
 .sec { background: white; border-bottom: 1px solid #e2e8f0; }
@@ -156,9 +161,10 @@ button:hover { background: #334155; color: #f8fafc; }
 /* PROMPTS & TEXTAREAS */
 .prompt { font-size: 11px; color: #64748b; margin-bottom: 6px; font-style: italic; line-height: 1.5; }
 textarea {
-  width: 100%; min-height: 80px; padding: 8px 10px; border: 1px solid #e2e8f0;
+  width: 100%; min-height: 240px; padding: 10px 12px; border: 1px solid #e2e8f0;
   border-radius: 6px; font-size: 13px; font-family: inherit; color: #1e293b;
-  background: #f8fafc; resize: vertical; outline: none; line-height: 1.55;
+  background: #f8fafc; resize: vertical; outline: none; line-height: 1.6;
+  tab-size: 2;
 }
 textarea:focus { border-color: #3b82f6; background: white; }
 
@@ -178,7 +184,7 @@ textarea:focus { border-color: #3b82f6; background: white; }
 .i-label::placeholder { color: #cbd5e1; }
 .del-btn { font-size: 15px; line-height: 1; padding: 0 4px; background: none; border: none; color: #94a3b8; cursor: pointer; }
 .del-btn:hover { color: #ef4444; background: none; }
-.i-text { min-height: 60px; border: none; border-radius: 0; background: white; }
+.i-text { min-height: 180px; border: none; border-radius: 0; background: white; }
 .i-text:focus { border: none; background: #fffffe; outline: 1px solid #3b82f680; }
 .empty-msg { font-size: 11px; color: #94a3b8; font-style: italic; padding: 2px 0 4px; }
 
@@ -328,7 +334,8 @@ textarea:focus { border-color: #3b82f6; background: white; }
     </div>
 
     <!-- ══ BEFORE READING ══ -->
-    <div class="phase-hdr">Before Reading</div>
+    <div class="phase-hdr" onclick="togglePhase('before')"><span class="ph-arrow">&#9660;</span>Before Reading</div>
+    <div class="phase-group" id="phase-before">
 
     <div class="sec before-sec sec-problem">
       <div class="sec-hdr" onclick="toggle('problem')">
@@ -378,19 +385,80 @@ textarea:focus { border-color: #3b82f6; background: white; }
       </div>
     </div>
 
-    <!-- ══ PAPER NOTES ══ -->
-    <div class="phase-hdr">Paper Notes</div>
+    </div><!-- /phase-before -->
 
-    <!-- DYNAMIC SECTIONS -->
-    <div id="ds-researchQuestions" class="sec sec-rq"></div>
-    <div id="ds-definitions"       class="sec sec-d"></div>
-    <div id="ds-techniques"        class="sec sec-t"></div>
-    <div id="ds-insights"          class="sec sec-i"></div>
-    <div id="ds-bitFlips"          class="sec sec-b"></div>
-    <div id="ds-experiments"       class="sec sec-e"></div>
+    <!-- ══ PAPER NOTES ══ -->
+    <div class="phase-hdr" onclick="togglePhase('paper-notes')"><span class="ph-arrow">&#9660;</span>Paper Notes</div>
+    <div class="phase-group" id="phase-paper-notes">
+
+    <div class="sec sec-rq">
+      <div class="sec-hdr" onclick="toggle('research-questions')">
+        <span class="sec-title">Paper's Research Questions</span>
+        <span class="sec-hint">Questions the paper sets out to answer</span>
+        <button class="sec-collapse" id="research-questions-btn">&#9650;</button>
+      </div>
+      <div class="sec-body" id="research-questions-body">
+        <p class="prompt">What are the formal questions this paper asks?</p>
+        <textarea id="f-research-questions" placeholder="The questions the paper poses..." oninput="us('researchQuestions',this.value)"></textarea>
+      </div>
+    </div>
+
+    <div class="sec sec-d">
+      <div class="sec-hdr" onclick="toggle('definitions')">
+        <span class="sec-title">Definitions / Notes</span>
+        <span class="sec-hint">Key definitions and notes</span>
+        <button class="sec-collapse" id="definitions-btn">&#9650;</button>
+      </div>
+      <div class="sec-body" id="definitions-body">
+        <p class="prompt">Key terms, definitions, and contextual notes.</p>
+        <textarea id="f-definitions" placeholder="Definitions and notes..." oninput="us('definitions',this.value)"></textarea>
+      </div>
+    </div>
+
+    <div class="sec sec-t">
+      <div class="sec-hdr" onclick="toggle('techniques')">
+        <span class="sec-title">Techniques Used</span>
+        <span class="sec-hint">Methods, architectures, tricks</span>
+        <button class="sec-collapse" id="techniques-btn">&#9650;</button>
+      </div>
+      <div class="sec-body" id="techniques-body">
+        <p class="prompt">What techniques, methods, or architectures does the paper use?</p>
+        <textarea id="f-techniques" placeholder="Techniques and methods..." oninput="us('techniques',this.value)"></textarea>
+      </div>
+    </div>
+
+    <div class="sec sec-i">
+      <div class="sec-hdr" onclick="toggle('insights')">
+        <span class="sec-title">Insights</span>
+        <span class="sec-hint">Insights from the paper</span>
+        <button class="sec-collapse" id="insights-btn">&#9650;</button>
+      </div>
+      <div class="sec-body" id="insights-body">
+        <p class="prompt">What's interesting or surprising in the paper?</p>
+        <textarea id="f-insights" placeholder="Insights from the paper..." oninput="us('insights',this.value)"></textarea>
+      </div>
+    </div>
+
+    <div class="sec sec-b">
+      <div class="sec-hdr" onclick="toggle('bit-flips')">
+        <span class="sec-title">Bit Flips</span>
+        <span class="sec-hint">Prior assumptions challenged</span>
+        <button class="sec-collapse" id="bit-flips-btn">&#9650;</button>
+      </div>
+      <div class="sec-body" id="bit-flips-body">
+        <p class="prompt">What assumptions does this paper overturn?</p>
+        <textarea id="f-bit-flips" placeholder="Bit flips in this paper..." oninput="us('bitFlips',this.value)"></textarea>
+      </div>
+    </div>
+
+    <!-- ONLY remaining dynamic section -->
+    <div id="ds-experiments" class="sec sec-e"></div>
+
+    </div><!-- /phase-paper-notes -->
 
     <!-- ══ MY ANALYSIS ══ -->
-    <div class="phase-hdr">My Analysis</div>
+    <div class="phase-hdr" onclick="togglePhase('analysis')"><span class="ph-arrow">&#9660;</span>My Analysis</div>
+    <div class="phase-group" id="phase-analysis">
 
     <div class="sec">
       <div class="sec-hdr" onclick="toggle('issues')">
@@ -413,6 +481,8 @@ textarea:focus { border-color: #3b82f6; background: white; }
         <textarea id="f-apply" placeholder="How this connects to my own research..." oninput="us('applyToOwnWork',this.value)"></textarea>
       </div>
     </div>
+
+    </div><!-- /phase-analysis -->
 
     <div id="notes-bottom-pad"></div>
   </div><!-- end notes-panel -->
@@ -453,12 +523,7 @@ textarea:focus { border-color: #3b82f6; background: white; }
 //  SECTION CONFIG
 // ─────────────────────────────────────────────
 const SECTIONS = [
-  { key:'researchQuestions', pre:'RQ', cls:'tag-rq', title:"Paper's Research Questions",  ph:"A question the paper formally asks...",      hint:"Questions the paper sets out to answer" },
-  { key:'definitions',       pre:'D',  cls:'tag-d',  title:'Definitions / Notes',         ph:'Define a term or add a note...',             hint:'Key definitions and notes' },
-  { key:'techniques',        pre:'T',  cls:'tag-t',  title:'Techniques Used',             ph:'A technique or method used in the paper...', hint:'Methods, architectures, tricks' },
-  { key:'insights',          pre:'I',  cls:'tag-i',  title:'Insights',                    ph:'Something interesting or surprising...',     hint:'Insights from the paper' },
-  { key:'bitFlips',          pre:'B',  cls:'tag-b',  title:'Bit Flips',                   ph:'An assumption this paper overturns...',      hint:'Prior assumptions challenged' },
-  { key:'experiments',       pre:'E',  cls:'tag-e',  title:"Paper's Experiments",         ph:'An experiment, dataset, baseline, or metric...', hint:'Experiments and evaluation details' },
+  { key:'experiments', pre:'E', cls:'tag-e', title:"Paper's Experiments", ph:'An experiment, dataset, baseline, or metric...', hint:'Experiments and evaluation details' },
 ];
 
 // ─────────────────────────────────────────────
@@ -468,7 +533,8 @@ const DEFAULTS = {
   info:{ title:'', authors:'', year:'', venue:'', link:'', field:'' },
   predictedApproach:'', predictedExperiments:'',
   problemStatement:'', priorAssumption:'',
-  researchQuestions:[], definitions:[], techniques:[], insights:[], bitFlips:[], experiments:[],
+  researchQuestions:'', definitions:'', techniques:'', insights:'', bitFlips:'',
+  experiments:[],
   issues:'', applyToOwnWork:'',
 };
 
@@ -505,11 +571,24 @@ window.addEventListener('DOMContentLoaded', () => {
 
   const saved = localStorage.getItem('pr_state');
   if (saved) {
-    try { S = Object.assign(deepCopy(DEFAULTS), JSON.parse(saved)); } catch(e) { /**/ }
+    try {
+      const parsed = JSON.parse(saved);
+      // Migrate old array-based dynamic sections to plain text.
+      ['researchQuestions','definitions','techniques','insights','bitFlips'].forEach(k => {
+        if (Array.isArray(parsed[k])) {
+          parsed[k] = parsed[k]
+            .map(it => (it.label ? `[${it.label}] ` : '') + (it.text || ''))
+            .filter(s => s.trim())
+            .join('\n\n');
+        }
+      });
+      S = Object.assign(deepCopy(DEFAULTS), parsed);
+    } catch(e) { /**/ }
   }
   SECTIONS.forEach(renderDynSection);
   populateStatic();
   updateLegend();
+  collapseAllSections();
   initResizer();
 
   document.getElementById('pdf-input').addEventListener('change', e => {
@@ -537,6 +616,11 @@ function populateStatic() {
   f('f-predict-exps',     S.predictedExperiments);
   f('f-problem',          S.problemStatement);
   f('f-prior',            S.priorAssumption);
+  f('f-research-questions', S.researchQuestions);
+  f('f-definitions',      S.definitions);
+  f('f-techniques',       S.techniques);
+  f('f-insights',         S.insights);
+  f('f-bit-flips',        S.bitFlips);
   f('f-issues',           S.issues);
   f('f-apply',            S.applyToOwnWork);
 }
@@ -749,6 +833,7 @@ function addItem(key) {
   S[key].push({ label:'', text:'' });
   const cfg = SECTIONS.find(c => c.key === key);
   renderDynSection(cfg);
+  expandSection(`dyn-${key}-body`);
   const idx = S[key].length - 1;
   const wrap = document.getElementById(`iw-${key}-${idx}`);
   if (wrap) { const ta = wrap.querySelector('textarea'); if (ta) ta.focus(); }
@@ -798,6 +883,143 @@ function toggle(id) {
   if (!body) return;
   const collapsed = body.classList.toggle('collapsed');
   if (btn) btn.innerHTML = collapsed ? '&#9660;' : '&#9650;';
+}
+
+function togglePhase(id) {
+  const grp = document.getElementById('phase-' + id);
+  if (!grp) return;
+  const hdr = grp.previousElementSibling;
+  const collapsed = grp.classList.toggle('collapsed');
+  if (hdr) hdr.classList.toggle('collapsed', collapsed);
+}
+
+function collapseAllSections() {
+  document.querySelectorAll('.sec-body').forEach(b => b.classList.add('collapsed'));
+  document.querySelectorAll('.sec-collapse').forEach(b => b.innerHTML = '&#9660;');
+}
+
+function expandSection(bodyId) {
+  const body = document.getElementById(bodyId);
+  const btn = document.getElementById(bodyId.replace(/-body$/, '-btn'));
+  if (body && body.classList.contains('collapsed')) {
+    body.classList.remove('collapsed');
+    if (btn) btn.innerHTML = '&#9650;';
+  }
+}
+
+// ─────────────────────────────────────────────
+//  LIST AUTOFORMAT IN TEXTAREAS
+//  Mimics Google Docs: Enter continues a numbered/bulleted list,
+//  Tab indents, empty list line exits the list.
+// ─────────────────────────────────────────────
+function handleListKey(e) {
+  const ta = e.target;
+  if (ta.tagName !== 'TEXTAREA') return;
+  const start = ta.selectionStart, end = ta.selectionEnd;
+  const value = ta.value;
+
+  if (e.key === 'Enter' && !e.shiftKey && start === end) {
+    const lineStart = value.lastIndexOf('\n', start - 1) + 1;
+    const currentLine = value.substring(lineStart, start);
+    const numMatch = currentLine.match(/^(\s*)(\d+)\.\s(.*)$/);
+    const bulMatch = currentLine.match(/^(\s*)([-*+])\s(.*)$/);
+
+    if (numMatch || bulMatch) {
+      e.preventDefault();
+      const indent = (numMatch || bulMatch)[1];
+      const content = numMatch ? numMatch[3] : bulMatch[3];
+
+      let newValue, newPos;
+      if (!content.trim()) {
+        // Empty list item — exit the list
+        newValue = value.substring(0, lineStart) + value.substring(start);
+        newPos = lineStart;
+      } else {
+        const prefix = numMatch
+          ? '\n' + indent + (parseInt(numMatch[2]) + 1) + '. '
+          : '\n' + indent + bulMatch[2] + ' ';
+        newValue = value.substring(0, start) + prefix + value.substring(start);
+        newPos = start + prefix.length;
+      }
+      ta.value = newValue;
+      ta.selectionStart = ta.selectionEnd = newPos;
+      ta.dispatchEvent(new Event('input', { bubbles: true }));
+    }
+  } else if (e.key === 'Tab') {
+    const lineStart = value.lastIndexOf('\n', start - 1) + 1;
+    const currentLine = value.substring(lineStart, start);
+    const isListLine = /^\s*(\d+\.|[-*+])\s/.test(currentLine);
+
+    if (e.shiftKey) {
+      if (currentLine.startsWith('  ')) {
+        e.preventDefault();
+        ta.value = value.substring(0, lineStart) + value.substring(lineStart + 2);
+        ta.selectionStart = ta.selectionEnd = start - 2;
+        ta.dispatchEvent(new Event('input', { bubbles: true }));
+      }
+    } else {
+      e.preventDefault();
+      if (isListLine) {
+        ta.value = value.substring(0, lineStart) + '  ' + value.substring(lineStart);
+        ta.selectionStart = ta.selectionEnd = start + 2;
+      } else {
+        ta.value = value.substring(0, start) + '  ' + value.substring(start);
+        ta.selectionStart = ta.selectionEnd = start + 2;
+      }
+      ta.dispatchEvent(new Event('input', { bubbles: true }));
+    }
+  }
+}
+
+// Convert plain text with markdown-style lists to HTML <ol>/<ul>/<p>.
+// Indent (in spaces) determines nesting depth.
+function listToHTML(text) {
+  if (!text || !text.trim()) return '';
+  const esc = s => (s || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+  const lines = text.split('\n');
+  const out = [];
+  const stack = [];
+  let para = [];
+
+  const flushPara = () => {
+    if (para.length) {
+      out.push(`<p>${para.join('<br>')}</p>`);
+      para = [];
+    }
+  };
+  const closeAll = () => {
+    while (stack.length) out.push(`</${stack.pop().type}>`);
+  };
+
+  for (const line of lines) {
+    const numMatch = line.match(/^(\s*)(\d+)\.\s+(.*)$/);
+    const bulMatch = line.match(/^(\s*)[-*+]\s+(.*)$/);
+    if (numMatch || bulMatch) {
+      flushPara();
+      const indent = (numMatch || bulMatch)[1].length;
+      const type = numMatch ? 'ol' : 'ul';
+      const content = numMatch ? numMatch[3] : bulMatch[2];
+      while (stack.length && stack[stack.length - 1].indent > indent) {
+        out.push(`</${stack.pop().type}>`);
+      }
+      if (stack.length && stack[stack.length - 1].indent === indent && stack[stack.length - 1].type !== type) {
+        out.push(`</${stack.pop().type}>`);
+      }
+      if (!stack.length || stack[stack.length - 1].indent < indent) {
+        out.push(`<${type}>`);
+        stack.push({ type, indent });
+      }
+      out.push(`<li>${esc(content)}</li>`);
+    } else if (line.trim() === '') {
+      flushPara();
+    } else {
+      closeAll();
+      para.push(esc(line));
+    }
+  }
+  flushPara();
+  closeAll();
+  return out.join('');
 }
 
 // ─────────────────────────────────────────────
@@ -861,7 +1083,8 @@ function fitW() { zoomLvl = 1.0; renderPage(curPage); }
 
 function onKey(e) {
   if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') {
-    if (e.ctrlKey && e.key === 's') { e.preventDefault(); exportJSON(); }
+    if (e.ctrlKey && e.key === 's') { e.preventDefault(); exportJSON(); return; }
+    if (e.target.tagName === 'TEXTAREA') handleListKey(e);
     return;
   }
   if (e.key === 'ArrowLeft'  || e.key === 'ArrowUp')   prevPage();
@@ -898,7 +1121,7 @@ function exportHTML() {
 }
 
 function newPaper() {
-  const hasData = S.info.title || S.problemStatement || S.priorAssumption || S.definitions.length;
+  const hasData = S.info.title || S.problemStatement || S.priorAssumption || S.definitions || S.experiments.length;
   if (hasData && !confirm('Start a new paper? Export notes first to save them.')) return;
   S = deepCopy(DEFAULTS);
   SECTIONS.forEach(renderDynSection); populateStatic(); updateLegend();
@@ -976,21 +1199,25 @@ function buildDocHTML() {
   let h = `<!DOCTYPE html><html><head><meta charset="UTF-8">
 <style>
   body{font-family:Arial,sans-serif;max-width:800px;margin:40px auto;color:#1e293b;line-height:1.6}
-  h1{font-size:22px;color:#0f172a;margin-bottom:6px}
-  h2{font-size:15px;color:#334155;border-bottom:2px solid #e2e8f0;padding-bottom:4px;margin-top:28px;text-transform:uppercase;letter-spacing:.05em}
-  h3{font-size:13px;color:#475569;margin:16px 0 6px;font-weight:700}
-  .meta{font-size:12px;color:#64748b;margin:2px 0}
-  .legend-box{background:#fefce8;border:1px solid #fde68a;padding:10px 14px;border-radius:6px;margin:14px 0;font-size:12px}
-  .legend-box strong{display:block;font-size:10px;text-transform:uppercase;letter-spacing:.05em;color:#92400e;margin-bottom:6px}
-  .ltag{display:inline-block;padding:1px 6px;border-radius:3px;color:white;font-size:10px;font-weight:700;margin-right:2px}
+  h1{font-size:32px;color:#0f172a;margin-bottom:10px}
+  h2{font-size:30px;color:#334155;border-bottom:2px solid #e2e8f0;padding-bottom:6px;margin-top:32px;text-transform:uppercase;letter-spacing:.05em}
+  h3{font-size:26px;color:#475569;margin:20px 0 8px;font-weight:700}
+  .meta{font-size:13px;color:#64748b;margin:2px 0}
+  .legend-box{background:#fefce8;border:1px solid #fde68a;padding:10px 14px;border-radius:6px;margin:14px 0;font-size:13px}
+  .legend-box strong{display:block;font-size:11px;text-transform:uppercase;letter-spacing:.05em;color:#92400e;margin-bottom:6px}
+  .ltag{display:inline-block;padding:1px 6px;border-radius:3px;color:white;font-size:11px;font-weight:700;margin-right:2px}
   .tag-d{background:#3b82f6}.tag-t{background:#10b981}.tag-i{background:#8b5cf6}
-  .tag-b{background:#f59e0b}.tag-rq{background:#ef4444}.tag-e{background:#06b6d4}.tag-mq{background:#ec4899}
-  .phase{font-size:9px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:#94a3b8;margin:28px 0 10px;border-top:1px solid #e2e8f0;padding-top:14px}
-  .predict-box{background:#fffbeb;border:1px solid #fde68a;padding:12px;border-radius:6px;margin:6px 0;font-size:13px}
-  .item{margin:8px 0;padding:10px 14px;border-left:3px solid #e2e8f0;background:#f8fafc;border-radius:0 6px 6px 0}
-  .itag{display:inline-block;padding:1px 6px;border-radius:3px;color:white;font-size:10px;font-weight:700}
-  .core-p{font-size:15px;font-weight:600;padding:12px;background:#f0fdf4;border-left:4px solid #16a34a;border-radius:0 8px 8px 0}
-  p{font-size:13px;margin:6px 0}hr{border:none;border-top:1px solid #e2e8f0;margin:24px 0}
+  .tag-b{background:#f59e0b}.tag-rq{background:#ef4444}.tag-e{background:#06b6d4}
+  .phase{font-size:18px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:#94a3b8;margin:32px 0 12px;border-top:1px solid #e2e8f0;padding-top:14px}
+  .predict-box{background:#fffbeb;border:1px solid #fde68a;padding:12px;border-radius:6px;margin:6px 0;font-size:14px}
+  .item{margin:10px 0;padding:10px 14px;border-left:3px solid #e2e8f0;background:#f8fafc;border-radius:0 6px 6px 0}
+  .itag{display:inline-block;padding:2px 8px;border-radius:3px;color:white;font-size:12px;font-weight:700}
+  p{font-size:14px;margin:6px 0}
+  ul,ol{font-size:14px;margin:6px 0 6px 24px;line-height:1.6}
+  ul ul{list-style-type:circle}ul ul ul{list-style-type:square}
+  ol ol{list-style-type:lower-alpha}ol ol ol{list-style-type:lower-roman}
+  li{margin:2px 0}
+  hr{border:none;border-top:1px solid #e2e8f0;margin:24px 0}
 </style></head><body>`;
 
   h += `<h1>${e(s.info.title||'Untitled Paper')}</h1>`;
@@ -1009,36 +1236,33 @@ function buildDocHTML() {
 
   if (s.predictedApproach||s.predictedExperiments) {
     h += `<p class="phase">Before Reading</p>`;
-    if (s.predictedApproach)    h += `<h3>My Predicted Approach</h3><div class="predict-box">${n2b(s.predictedApproach)}</div>`;
-    if (s.predictedExperiments) h += `<h3>My Predicted Experiments</h3><div class="predict-box">${n2b(s.predictedExperiments)}</div>`;
+    if (s.predictedApproach)    h += `<h3>My Predicted Approach</h3><div class="predict-box">${listToHTML(s.predictedApproach)}</div>`;
+    if (s.predictedExperiments) h += `<h3>My Predicted Experiments</h3><div class="predict-box">${listToHTML(s.predictedExperiments)}</div>`;
   }
 
   h += `<p class="phase">Paper Notes</p>`;
-  if (s.problemStatement) h += `<h3>Problem Statement</h3><p>${n2b(s.problemStatement)}</p>`;
-  if (s.priorAssumption)  h += `<h3>Prior Assumption (Bit Flip Setup)</h3><p>${n2b(s.priorAssumption)}</p>`;
+  if (s.problemStatement)  h += `<h3>Problem Statement</h3>${listToHTML(s.problemStatement)}`;
+  if (s.priorAssumption)   h += `<h3>Prior Assumption (Bit Flip Setup)</h3>${listToHTML(s.priorAssumption)}`;
+  if (s.researchQuestions) h += `<h3>Paper's Research Questions</h3>${listToHTML(s.researchQuestions)}`;
+  if (s.definitions)       h += `<h3>Definitions / Notes</h3>${listToHTML(s.definitions)}`;
+  if (s.techniques)        h += `<h3>Techniques Used</h3>${listToHTML(s.techniques)}`;
+  if (s.insights)          h += `<h3>Insights</h3>${listToHTML(s.insights)}`;
+  if (s.bitFlips)          h += `<h3>Bit Flips</h3>${listToHTML(s.bitFlips)}`;
 
-  [
-    { key:'researchQuestions', pre:'RQ', cls:'tag-rq', title:"Paper's Research Questions" },
-    { key:'definitions',       pre:'D',  cls:'tag-d',  title:'Definitions / Notes' },
-    { key:'techniques',        pre:'T',  cls:'tag-t',  title:'Techniques Used' },
-    { key:'insights',          pre:'I',  cls:'tag-i',  title:'Insights' },
-    { key:'bitFlips',          pre:'B',  cls:'tag-b',  title:'Bit Flips' },
-    { key:'experiments',       pre:'E',  cls:'tag-e',  title:"Paper's Experiments" },
-  ].forEach(sec => {
-    const items = (s[sec.key]||[]).filter(x => x.text||x.label);
-    if (!items.length) return;
-    h += `<h3>${sec.title}</h3>`;
-    items.forEach((item,i) => {
-      h += `<div class="item"><span class="itag ${sec.cls}">[${sec.pre}${i+1}]</span>`;
+  const experiments = (s.experiments||[]).filter(x => x.text||x.label);
+  if (experiments.length) {
+    h += `<h3>Paper's Experiments</h3>`;
+    experiments.forEach((item,i) => {
+      h += `<div class="item"><span class="itag tag-e">[E${i+1}]</span>`;
       if (item.label) h += ` <b>${e(item.label)}</b>`;
-      if (item.text)  h += `<br><p>${n2b(item.text)}</p>`;
+      if (item.text)  h += listToHTML(item.text);
       h += `</div>`;
     });
-  });
+  }
 
   h += `<p class="phase">My Analysis</p>`;
-  if (s.issues)         h += `<h3>Issues / Limitations</h3><p>${n2b(s.issues)}</p>`;
-  if (s.applyToOwnWork) h += `<h3>Apply to Own Work</h3><p>${n2b(s.applyToOwnWork)}</p>`;
+  if (s.issues)         h += `<h3>Issues / Limitations</h3>${listToHTML(s.issues)}`;
+  if (s.applyToOwnWork) h += `<h3>Apply to Own Work</h3>${listToHTML(s.applyToOwnWork)}`;
 
   h += `</body></html>`;
   return h;
