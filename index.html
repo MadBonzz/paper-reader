@@ -330,6 +330,30 @@ textarea:focus { border-color: #3b82f6; background: white; }
     <!-- ══ BEFORE READING ══ -->
     <div class="phase-hdr">Before Reading</div>
 
+    <div class="sec before-sec sec-problem">
+      <div class="sec-hdr" onclick="toggle('problem')">
+        <span class="sec-title">Problem Statement</span>
+        <span class="sec-hint">From the abstract / intro</span>
+        <button class="sec-collapse" id="problem-btn">&#9650;</button>
+      </div>
+      <div class="sec-body" id="problem-body">
+        <p class="prompt">From the abstract/intro: what exact problem does this paper address? What gap exists in prior work?</p>
+        <textarea id="f-problem" placeholder="The core problem this paper addresses..." oninput="us('problemStatement',this.value)"></textarea>
+      </div>
+    </div>
+
+    <div class="sec before-sec sec-prior">
+      <div class="sec-hdr" onclick="toggle('prior')">
+        <span class="sec-title">Prior Assumption (Bit Flip Setup)</span>
+        <span class="sec-hint">What did ALL prior work assume?</span>
+        <button class="sec-collapse" id="prior-btn">&#9650;</button>
+      </div>
+      <div class="sec-body" id="prior-body">
+        <p class="prompt">Complete this after reading Related Work: "All prior work implicitly assumed ___. This paper challenges that by ___."</p>
+        <textarea id="f-prior" placeholder="All prior work assumed... This paper flips that by..." oninput="us('priorAssumption',this.value)"></textarea>
+      </div>
+    </div>
+
     <div class="sec before-sec">
       <div class="sec-hdr" onclick="toggle('predict-approach')">
         <span class="sec-title">My Predicted Approach</span>
@@ -356,29 +380,6 @@ textarea:focus { border-color: #3b82f6; background: white; }
 
     <!-- ══ PAPER NOTES ══ -->
     <div class="phase-hdr">Paper Notes</div>
-
-    <div class="sec sec-problem">
-      <div class="sec-hdr" onclick="toggle('problem')">
-        <span class="sec-title">Problem Statement</span>
-        <button class="sec-collapse" id="problem-btn">&#9650;</button>
-      </div>
-      <div class="sec-body" id="problem-body">
-        <p class="prompt">From the abstract/intro: what exact problem does this paper address? What gap exists in prior work?</p>
-        <textarea id="f-problem" placeholder="The core problem this paper addresses..." oninput="us('problemStatement',this.value)"></textarea>
-      </div>
-    </div>
-
-    <div class="sec sec-prior">
-      <div class="sec-hdr" onclick="toggle('prior')">
-        <span class="sec-title">Prior Assumption (Bit Flip Setup)</span>
-        <span class="sec-hint">What did ALL prior work assume?</span>
-        <button class="sec-collapse" id="prior-btn">&#9650;</button>
-      </div>
-      <div class="sec-body" id="prior-body">
-        <p class="prompt">Complete this after reading Related Work: "All prior work implicitly assumed ___. This paper challenges that by ___."</p>
-        <textarea id="f-prior" placeholder="All prior work assumed... This paper flips that by..." oninput="us('priorAssumption',this.value)"></textarea>
-      </div>
-    </div>
 
     <!-- DYNAMIC SECTIONS -->
     <div id="ds-definitions"       class="sec sec-d"></div>
@@ -1103,23 +1104,40 @@ function closeModal(id) { document.getElementById(id).classList.add('hidden'); }
 function initResizer() {
   const r = document.getElementById('resizer');
   const p = document.getElementById('pdf-panel');
-  let on=false, sx=0, sw=0;
+  let on = false, sx = 0, sw = 0, maxW = 0, rafId = null;
+
   r.addEventListener('mousedown', e => {
-    on=true; sx=e.clientX; sw=p.offsetWidth;
+    e.preventDefault();
+    on = true;
+    sx = e.clientX;
+    sw = p.offsetWidth;
+    maxW = document.getElementById('main').offsetWidth - 300;
     r.classList.add('active');
-    document.body.style.cssText += ';cursor:col-resize;user-select:none';
+    document.body.style.cursor = 'col-resize';
+    document.body.style.userSelect = 'none';
   });
-  document.addEventListener('mousemove', e => {
+
+  window.addEventListener('mousemove', e => {
     if (!on) return;
-    const max = document.getElementById('main').offsetWidth - 300;
-    p.style.width = Math.max(280, Math.min(max, sw + e.clientX - sx)) + 'px';
+    if (rafId) cancelAnimationFrame(rafId);
+    const nx = e.clientX;
+    rafId = requestAnimationFrame(() => {
+      p.style.width = Math.max(280, Math.min(maxW, sw + nx - sx)) + 'px';
+    });
   });
-  document.addEventListener('mouseup', () => {
+
+  function stopResize() {
     if (!on) return;
-    on=false; r.classList.remove('active');
-    document.body.style.cursor=''; document.body.style.userSelect='';
+    on = false;
+    if (rafId) { cancelAnimationFrame(rafId); rafId = null; }
+    r.classList.remove('active');
+    document.body.style.cursor = '';
+    document.body.style.userSelect = '';
     if (pdfDoc) renderPage(curPage);
-  });
+  }
+
+  window.addEventListener('mouseup', stopResize);
+  window.addEventListener('blur', stopResize);
 }
 
 // ─────────────────────────────────────────────
