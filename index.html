@@ -656,6 +656,15 @@ async function loadFromUrl() {
   const raw = document.getElementById('url-input').value.trim();
   if (!raw) return;
 
+  // Loading a different paper than the one currently in notes? Wipe notes
+  // (with confirm) so each new paper starts with a clean slate.
+  const sameAsCurrent = S.info.link && S.info.link.trim() === raw;
+  if (!sameAsCurrent) {
+    if (!ensureFreshNotes('Loading a new paper will clear your current notes. Export them first to save. Continue?')) {
+      return;
+    }
+  }
+
   const parsed = parseUrl(raw);
   setUrlStatus('loading', parsed.type, 'Loading PDF...');
 
@@ -1113,6 +1122,11 @@ function listToHTML(text) {
 let pdfDoc = null, curPage = 1, zoomLvl = 1.0;
 
 async function loadLocalPDF(file) {
+  // Loading a fresh PDF — wipe any previous notes (with confirm).
+  if (!ensureFreshNotes('Loading a new PDF will clear your current notes. Export them first to save. Continue?')) {
+    document.getElementById('pdf-input').value = '';
+    return;
+  }
   try {
     const data = await file.arrayBuffer();
     pdfDoc = await pdfjsLib.getDocument({ data }).promise;
@@ -1205,12 +1219,36 @@ function exportHTML() {
   setSaveLabel('HTML exported');
 }
 
-function newPaper() {
-  const hasData = S.info.title || S.problemStatement || S.priorAssumption || S.definitions || S.experiments.length;
-  if (hasData && !confirm('Start a new paper? Export notes first to save them.')) return;
+function hasAnyNotes() {
+  const i = S.info;
+  if (i.title || i.authors || i.year || i.venue || i.link || i.field) return true;
+  const txt = ['predictedApproach','predictedExperiments','problemStatement','priorAssumption',
+               'researchQuestions','definitions','techniques','insights','bitFlips',
+               'issues','applyToOwnWork'];
+  for (const f of txt) if (S[f] && String(S[f]).trim()) return true;
+  if (S.experiments && S.experiments.length) return true;
+  return false;
+}
+
+function resetState() {
   S = deepCopy(DEFAULTS);
-  SECTIONS.forEach(renderDynSection); populateStatic(); updateLegend();
+  SECTIONS.forEach(renderDynSection);
+  populateStatic();
+  updateLegend();
+  collapseAllSections();
   localStorage.removeItem('pr_state');
+}
+
+// Returns true if it's safe to proceed (notes were empty, or user confirmed clearing).
+function ensureFreshNotes(message) {
+  if (!hasAnyNotes()) return true;
+  if (!confirm(message)) return false;
+  resetState();
+  return true;
+}
+
+function newPaper() {
+  if (!ensureFreshNotes('Start a new paper? Export notes first to save them.')) return;
   setSaveLabel('New paper');
 }
 
