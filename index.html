@@ -445,6 +445,19 @@ textarea:focus { border-color: #3b82f6; background: white; }
   </div><!-- end notes-panel -->
 </div><!-- end main -->
 
+<!-- GDOCS EXPORT MODAL -->
+<div class="overlay hidden" id="gdocs-modal">
+  <div class="modal">
+    <h2>Export to Google Docs</h2>
+    <p style="font-size:12px;color:#64748b;margin-bottom:10px">Choose a name for your Google Doc.</p>
+    <input class="m-input" id="gdocs-name-input" placeholder="Document name..." onkeydown="if(event.key==='Enter')confirmGDocsExport()">
+    <div class="m-actions">
+      <button onclick="closeModal('gdocs-modal')">Cancel</button>
+      <button class="btn-green" onclick="confirmGDocsExport()">Export</button>
+    </div>
+  </div>
+</div>
+
 <!-- SETTINGS MODAL -->
 <div class="overlay hidden" id="settings-modal">
   <div class="modal">
@@ -943,13 +956,22 @@ function download(content, name, type) {
 //  That function holds the Apps Script URL in an env var —
 //  it is never sent to the browser.
 // ─────────────────────────────────────────────
-async function handleGDocs() {
+function handleGDocs() {
+  const input = document.getElementById('gdocs-name-input');
+  input.value = S.info.title || 'Paper Notes';
+  document.getElementById('gdocs-modal').classList.remove('hidden');
+  setTimeout(() => { input.focus(); input.select(); }, 50);
+}
+
+async function confirmGDocsExport() {
+  const name = document.getElementById('gdocs-name-input').value.trim() || S.info.title || 'Paper Notes';
+  closeModal('gdocs-modal');
   setSaveLabel('Creating Google Doc...');
   try {
     const res = await fetch('/api/export', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ title: S.info.title || 'Paper Notes', html: buildDocHTML() }),
+      body: JSON.stringify({ title: name, html: buildDocHTML() }),
     });
     const data = await res.json();
     if (!res.ok || data.error) throw new Error(data.error || 'Export failed');
