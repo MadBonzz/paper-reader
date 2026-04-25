@@ -382,43 +382,15 @@ textarea:focus { border-color: #3b82f6; background: white; }
     <div class="phase-hdr">Paper Notes</div>
 
     <!-- DYNAMIC SECTIONS -->
+    <div id="ds-researchQuestions" class="sec sec-rq"></div>
     <div id="ds-definitions"       class="sec sec-d"></div>
     <div id="ds-techniques"        class="sec sec-t"></div>
     <div id="ds-insights"          class="sec sec-i"></div>
     <div id="ds-bitFlips"          class="sec sec-b"></div>
-    <div id="ds-researchQuestions" class="sec sec-rq"></div>
     <div id="ds-experiments"       class="sec sec-e"></div>
 
     <!-- ══ MY ANALYSIS ══ -->
     <div class="phase-hdr">My Analysis</div>
-
-    <div id="ds-myQuestions" class="sec sec-mq"></div>
-
-    <div class="sec sec-core">
-      <div class="sec-hdr" onclick="toggle('core-insight')">
-        <span class="sec-title">Core Insight</span>
-        <span class="sec-hint">One sentence — insight, not method</span>
-        <button class="sec-collapse" id="core-insight-btn">&#9650;</button>
-      </div>
-      <div class="sec-body" id="core-insight-body">
-        <p class="prompt">What is now <em>known</em> that wasn't before? Must be an insight (what is true), not a method (what they did) or result (what happened).</p>
-        <textarea id="f-core-insight" class="core-ta"
-          placeholder='e.g. "The optimal policy under KL-constrained RL can be expressed as a closed-form reparameterization of the data" — not "They removed the reward model"'
-          oninput="us('coreInsight',this.value);updateWordCount(this)"></textarea>
-        <div class="char-hint" id="core-hint">Aim for one clear sentence</div>
-      </div>
-    </div>
-
-    <div class="sec">
-      <div class="sec-hdr" onclick="toggle('extensions')">
-        <span class="sec-title">Extensions / Research Ideas</span>
-        <button class="sec-collapse" id="extensions-btn">&#9650;</button>
-      </div>
-      <div class="sec-body" id="extensions-body">
-        <p class="prompt">What directions does this open? Cross-domain analogies? What would you explore next?</p>
-        <textarea id="f-extensions" placeholder="Research extensions and ideas..." oninput="us('extensions',this.value)"></textarea>
-      </div>
-    </div>
 
     <div class="sec">
       <div class="sec-hdr" onclick="toggle('issues')">
@@ -481,13 +453,12 @@ textarea:focus { border-color: #3b82f6; background: white; }
 //  SECTION CONFIG
 // ─────────────────────────────────────────────
 const SECTIONS = [
-  { key:'definitions',       pre:'D',  cls:'tag-d',  title:'Definitions / Notes',        ph:'Define a term or add a note...',             hint:'Key definitions and notes' },
+  { key:'researchQuestions', pre:'RQ', cls:'tag-rq', title:"Paper's Research Questions",  ph:"A question the paper formally asks...",      hint:"Questions the paper sets out to answer" },
+  { key:'definitions',       pre:'D',  cls:'tag-d',  title:'Definitions / Notes',         ph:'Define a term or add a note...',             hint:'Key definitions and notes' },
   { key:'techniques',        pre:'T',  cls:'tag-t',  title:'Techniques Used',             ph:'A technique or method used in the paper...', hint:'Methods, architectures, tricks' },
   { key:'insights',          pre:'I',  cls:'tag-i',  title:'Insights',                    ph:'Something interesting or surprising...',     hint:'Insights from the paper' },
   { key:'bitFlips',          pre:'B',  cls:'tag-b',  title:'Bit Flips',                   ph:'An assumption this paper overturns...',      hint:'Prior assumptions challenged' },
-  { key:'researchQuestions', pre:'RQ', cls:'tag-rq', title:"Paper's Research Questions",  ph:"A question the paper formally asks...",      hint:"Questions the paper sets out to answer" },
   { key:'experiments',       pre:'E',  cls:'tag-e',  title:"Paper's Experiments",         ph:'An experiment, dataset, baseline, or metric...', hint:'Experiments and evaluation details' },
-  { key:'myQuestions',       pre:'MQ', cls:'tag-mq', title:'My Questions',                ph:'A question I want to explore...',            hint:'Your own questions and ideas' },
 ];
 
 // ─────────────────────────────────────────────
@@ -497,9 +468,8 @@ const DEFAULTS = {
   info:{ title:'', authors:'', year:'', venue:'', link:'', field:'' },
   predictedApproach:'', predictedExperiments:'',
   problemStatement:'', priorAssumption:'',
-  definitions:[], techniques:[], insights:[], bitFlips:[],
-  researchQuestions:[], experiments:[], myQuestions:[],
-  coreInsight:'', extensions:'', issues:'', applyToOwnWork:'',
+  researchQuestions:[], definitions:[], techniques:[], insights:[], bitFlips:[], experiments:[],
+  issues:'', applyToOwnWork:'',
 };
 
 let S = deepCopy(DEFAULTS);
@@ -567,12 +537,8 @@ function populateStatic() {
   f('f-predict-exps',     S.predictedExperiments);
   f('f-problem',          S.problemStatement);
   f('f-prior',            S.priorAssumption);
-  f('f-core-insight',     S.coreInsight);
-  f('f-extensions',       S.extensions);
   f('f-issues',           S.issues);
   f('f-apply',            S.applyToOwnWork);
-  const ci = document.getElementById('f-core-insight');
-  if (ci) updateWordCount(ci);
 }
 
 // ─────────────────────────────────────────────
@@ -932,7 +898,7 @@ function exportHTML() {
 }
 
 function newPaper() {
-  const hasData = S.info.title || S.problemStatement || S.coreInsight || S.definitions.length;
+  const hasData = S.info.title || S.problemStatement || S.priorAssumption || S.definitions.length;
   if (hasData && !confirm('Start a new paper? Export notes first to save them.')) return;
   S = deepCopy(DEFAULTS);
   SECTIONS.forEach(renderDynSection); populateStatic(); updateLegend();
@@ -1049,11 +1015,11 @@ function buildDocHTML() {
   if (s.priorAssumption)  h += `<h3>Prior Assumption (Bit Flip Setup)</h3><p>${n2b(s.priorAssumption)}</p>`;
 
   [
+    { key:'researchQuestions', pre:'RQ', cls:'tag-rq', title:"Paper's Research Questions" },
     { key:'definitions',       pre:'D',  cls:'tag-d',  title:'Definitions / Notes' },
     { key:'techniques',        pre:'T',  cls:'tag-t',  title:'Techniques Used' },
     { key:'insights',          pre:'I',  cls:'tag-i',  title:'Insights' },
     { key:'bitFlips',          pre:'B',  cls:'tag-b',  title:'Bit Flips' },
-    { key:'researchQuestions', pre:'RQ', cls:'tag-rq', title:"Paper's Research Questions" },
     { key:'experiments',       pre:'E',  cls:'tag-e',  title:"Paper's Experiments" },
   ].forEach(sec => {
     const items = (s[sec.key]||[]).filter(x => x.text||x.label);
@@ -1068,18 +1034,6 @@ function buildDocHTML() {
   });
 
   h += `<p class="phase">My Analysis</p>`;
-  const myQs = (s.myQuestions||[]).filter(x => x.text||x.label);
-  if (myQs.length) {
-    h += `<h3>My Questions</h3>`;
-    myQs.forEach((item,i) => {
-      h += `<div class="item"><span class="itag tag-mq">[MQ${i+1}]</span>`;
-      if (item.label) h += ` <b>${e(item.label)}</b>`;
-      if (item.text)  h += `<br><p>${n2b(item.text)}</p>`;
-      h += `</div>`;
-    });
-  }
-  if (s.coreInsight)    h += `<h3>Core Insight</h3><p class="core-p">${n2b(s.coreInsight)}</p>`;
-  if (s.extensions)     h += `<h3>Extensions / Research Ideas</h3><p>${n2b(s.extensions)}</p>`;
   if (s.issues)         h += `<h3>Issues / Limitations</h3><p>${n2b(s.issues)}</p>`;
   if (s.applyToOwnWork) h += `<h3>Apply to Own Work</h3><p>${n2b(s.applyToOwnWork)}</p>`;
 
@@ -1104,38 +1058,60 @@ function closeModal(id) { document.getElementById(id).classList.add('hidden'); }
 function initResizer() {
   const r = document.getElementById('resizer');
   const p = document.getElementById('pdf-panel');
+  const main = document.getElementById('main');
+  const frame = document.getElementById('pdf-frame');
+  const canvas = document.getElementById('pdf-canvas');
   let on = false, sx = 0, sw = 0, maxW = 0, rafId = null;
 
-  r.addEventListener('mousedown', e => {
+  // Fullscreen overlay shown only during drag. Sits above the PDF iframe so
+  // the iframe (a separate browsing context) can never swallow the mouse —
+  // without this, moving over the iframe freezes the drag and "sticks" it.
+  const overlay = document.createElement('div');
+  overlay.style.cssText =
+    'position:fixed;inset:0;z-index:9999;cursor:col-resize;display:none;background:transparent';
+  document.body.appendChild(overlay);
+
+  function startResize(e) {
     e.preventDefault();
     on = true;
     sx = e.clientX;
     sw = p.offsetWidth;
-    maxW = document.getElementById('main').offsetWidth - 300;
+    maxW = main.offsetWidth - 300;
     r.classList.add('active');
-    document.body.style.cursor = 'col-resize';
     document.body.style.userSelect = 'none';
-  });
+    overlay.style.display = 'block';
+    // Hide PDF content during drag — re-rendering on every pixel of width
+    // change is what makes growing the panel laggy. We restore on mouseup
+    // and re-render the canvas page once.
+    frame.style.visibility = 'hidden';
+    canvas.style.visibility = 'hidden';
+  }
 
-  window.addEventListener('mousemove', e => {
+  function onMove(e) {
     if (!on) return;
     if (rafId) cancelAnimationFrame(rafId);
     const nx = e.clientX;
     rafId = requestAnimationFrame(() => {
       p.style.width = Math.max(280, Math.min(maxW, sw + nx - sx)) + 'px';
     });
-  });
+  }
 
   function stopResize() {
     if (!on) return;
     on = false;
     if (rafId) { cancelAnimationFrame(rafId); rafId = null; }
     r.classList.remove('active');
-    document.body.style.cursor = '';
     document.body.style.userSelect = '';
+    overlay.style.display = 'none';
+    frame.style.visibility = '';
+    canvas.style.visibility = '';
     if (pdfDoc) renderPage(curPage);
   }
 
+  r.addEventListener('mousedown', startResize);
+  overlay.addEventListener('mousemove', onMove);
+  overlay.addEventListener('mouseup', stopResize);
+  // Safety nets in case the overlay misses the release
   window.addEventListener('mouseup', stopResize);
   window.addEventListener('blur', stopResize);
 }
@@ -1145,11 +1121,6 @@ function initResizer() {
 // ─────────────────────────────────────────────
 function esc(s) {
   return (s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
-}
-function updateWordCount(el) {
-  const w = (el.value||'').trim().split(/\s+/).filter(Boolean).length;
-  const h = document.getElementById('core-hint');
-  if (h) h.textContent = w===0 ? 'Aim for one clear sentence' : `${w} word${w===1?'':'s'} — aim for one sentence`;
 }
 </script>
 </body>
