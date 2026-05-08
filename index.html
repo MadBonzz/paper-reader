@@ -339,13 +339,25 @@ textarea:focus { border-color: #3b82f6; background: white; }
 
     <div class="sec before-sec sec-problem">
       <div class="sec-hdr" onclick="toggle('problem')">
-        <span class="sec-title">Problem Statement</span>
+        <span class="sec-title">Problem Statement / Claim</span>
         <span class="sec-hint">From the abstract / intro</span>
         <button class="sec-collapse" id="problem-btn">&#9650;</button>
       </div>
       <div class="sec-body" id="problem-body">
-        <p class="prompt">From the abstract/intro: what exact problem does this paper address? What gap exists in prior work?</p>
-        <textarea id="f-problem" placeholder="The core problem this paper addresses..." oninput="us('problemStatement',this.value)"></textarea>
+        <p class="prompt">From the abstract/intro: what exact problem or claim does this paper address? What gap exists in prior work?</p>
+        <textarea id="f-problem" placeholder="The core problem or claim this paper addresses..." oninput="us('problemStatement',this.value)"></textarea>
+      </div>
+    </div>
+
+    <div class="sec before-sec sec-prior">
+      <div class="sec-hdr" onclick="toggle('alternative-explanation')">
+        <span class="sec-title">Alternative Explanation</span>
+        <span class="sec-hint">What else could explain the claim?</span>
+        <button class="sec-collapse" id="alternative-explanation-btn">&#9650;</button>
+      </div>
+      <div class="sec-body" id="alternative-explanation-body">
+        <p class="prompt">Before accepting the paper's framing: what simpler, confounded, or competing explanation could account for the claimed result?</p>
+        <textarea id="f-alternative-explanation" placeholder="An alternative explanation could be..." oninput="us('alternativeExplanation',this.value)"></textarea>
       </div>
     </div>
 
@@ -532,7 +544,7 @@ const SECTIONS = [
 const DEFAULTS = {
   info:{ title:'', authors:'', year:'', venue:'', link:'', field:'' },
   predictedApproach:'', predictedExperiments:'',
-  problemStatement:'', priorAssumption:'',
+  problemStatement:'', alternativeExplanation:'', priorAssumption:'',
   researchQuestions:'', definitions:'', techniques:'', insights:'', bitFlips:'',
   experiments:[],
   issues:'', applyToOwnWork:'',
@@ -637,6 +649,7 @@ function populateStatic() {
   f('f-predict-approach', S.predictedApproach);
   f('f-predict-exps',     S.predictedExperiments);
   f('f-problem',          S.problemStatement);
+  f('f-alternative-explanation', S.alternativeExplanation);
   f('f-prior',            S.priorAssumption);
   f('f-research-questions', S.researchQuestions);
   f('f-definitions',      S.definitions);
@@ -1222,7 +1235,7 @@ function exportHTML() {
 function hasAnyNotes() {
   const i = S.info;
   if (i.title || i.authors || i.year || i.venue || i.link || i.field) return true;
-  const txt = ['predictedApproach','predictedExperiments','problemStatement','priorAssumption',
+  const txt = ['predictedApproach','predictedExperiments','problemStatement','alternativeExplanation','priorAssumption',
                'researchQuestions','definitions','techniques','insights','bitFlips',
                'issues','applyToOwnWork'];
   for (const f of txt) if (S[f] && String(S[f]).trim()) return true;
@@ -1357,14 +1370,15 @@ function buildDocHTML() {
   }
   h += '<hr>';
 
-  if (s.predictedApproach||s.predictedExperiments) {
+  if (s.problemStatement||s.alternativeExplanation||s.predictedApproach||s.predictedExperiments) {
     h += `<p class="phase">Before Reading</p>`;
+    if (s.problemStatement)      h += `<h3>Problem Statement / Claim</h3>${listToHTML(s.problemStatement)}`;
+    if (s.alternativeExplanation) h += `<h3>Alternative Explanation</h3>${listToHTML(s.alternativeExplanation)}`;
     if (s.predictedApproach)    h += `<h3>My Predicted Approach</h3><div class="predict-box">${listToHTML(s.predictedApproach)}</div>`;
     if (s.predictedExperiments) h += `<h3>My Predicted Experiments</h3><div class="predict-box">${listToHTML(s.predictedExperiments)}</div>`;
   }
 
   h += `<p class="phase">Paper Notes</p>`;
-  if (s.problemStatement)  h += `<h3>Problem Statement</h3>${listToHTML(s.problemStatement)}`;
   if (s.priorAssumption)   h += `<h3>Prior Assumption (Bit Flip Setup)</h3>${listToHTML(s.priorAssumption)}`;
   if (s.researchQuestions) h += `<h3>Paper's Research Questions</h3>${listToHTML(s.researchQuestions)}`;
   if (s.definitions)       h += `<h3>Definitions / Notes</h3>${listToHTML(s.definitions)}`;
