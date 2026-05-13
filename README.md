@@ -22,7 +22,6 @@ Then open **http://localhost:8080** in your browser.
 |---|---|---|
 | Before Reading | Problem Statement / Claim | The exact gap or claim this paper centers |
 | Before Reading | Alternative Explanation | A competing or confounded explanation for the claim |
-| Before Reading | My Predicted Approach | Write YOUR approach before reading the method. The divergence is the learning. |
 | Before Reading | My Predicted Experiments | Design your eval before seeing the paper's results. |
 | Paper Notes | Prior Assumption (Bit Flip) | Complete: "All prior work assumed ___ . This paper flips that by ___." |
 | Paper Notes | Definitions [D1, D2...] | Key terms and concepts |
